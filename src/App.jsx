@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Screening from "./pages/Screening";
@@ -11,17 +11,15 @@ import "./App.css";
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/screening" element={<Screening />} />
-            <Route path="/requisitions" element={<Requisitions />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/analytics" element={<Analytics />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/screening" element={<Screening />} />
+          <Route path="/requisitions" element={<Requisitions />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/analytics" element={<Analytics />} />
+        </Route>
+      </Routes>
     </AppProvider>
   );
 }

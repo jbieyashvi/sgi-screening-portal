@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
 import {
-  Search,
   Sparkles,
   Check,
   X,
   MapPin,
   Calendar,
   Briefcase,
-  ChevronRight,
 } from "lucide-react";
 import { useApp } from "../store";
 
@@ -17,6 +15,8 @@ const FILTERS = [
   { key: "hybrid", label: "Hybrid OK" },
   { key: "sql", label: "SQL required" },
 ];
+
+const STATUS_TABS = ["All", "To Review", "Screening", "Declined", "Knocked Out"];
 
 export default function Screening() {
   const { candidates, activeReq, advanceCandidate, declineCandidate } = useApp();
@@ -52,16 +52,6 @@ export default function Screening() {
     });
   }, [reqCandidates, filters, query, statusFilter]);
 
-  const statusCounts = useMemo(() => {
-    const base = { All: reqCandidates.length, "To Review": 0, Screening: 0, Declined: 0, "Knocked Out": 0 };
-    reqCandidates.forEach((c) => {
-      if (base[c.status] !== undefined) base[c.status] += 1;
-    });
-    return base;
-  }, [reqCandidates]);
-
-  const STATUS_TABS = ["All", "To Review", "Screening", "Declined", "Knocked Out"];
-
   const rank = (s) => {
     if (s === "Screening") return 0;
     if (s === "To Review") return 1;
@@ -84,13 +74,6 @@ export default function Screening() {
     sorted.find((c) => c.id === selectedId) ||
     sorted.find((c) => c.status === "To Review") ||
     sorted[0];
-
-  const stats = {
-    total: reqCandidates.length,
-    knocked: reqCandidates.filter((c) => c.status === "Knocked Out").length,
-    review: reqCandidates.filter((c) => c.status === "To Review").length,
-    top: reqCandidates.filter((c) => c.match && c.match >= 85).length,
-  };
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
@@ -129,37 +112,23 @@ export default function Screening() {
             })}
           </div>
 
-          <div className="grid grid-cols-4 gap-2 pt-2">
-            {[
-              { label: "Total", value: stats.total, color: "text-slate-900" },
-              { label: "Knocked", value: stats.knocked, color: "text-red-600" },
-              { label: "Review", value: stats.review, color: "text-amber-600" },
-              { label: "Top", value: stats.top, color: "text-emerald-600" },
-            ].map((s) => (
-              <div key={s.label} className="text-center">
-                <div className={`text-lg font-semibold ${s.color}`}>{s.value}</div>
-                <div className="text-[10px] uppercase tracking-wide text-slate-400">
-                  {s.label}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
-        <div className="border-b border-slate-100 px-2 pt-1 flex gap-0.5 overflow-x-auto">
+        {/* Status tabs — minimal underline, symmetric spacing */}
+        <div className="border-b border-slate-200 grid grid-cols-5">
           {STATUS_TABS.map((t) => {
             const on = statusFilter === t;
             return (
               <button
                 key={t}
                 onClick={() => setStatusFilter(t)}
-                className={`px-2.5 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition ${
+                className={`text-[11px] font-medium text-center px-2 py-2.5 border-b-2 -mb-px transition whitespace-nowrap ${
                   on
                     ? "border-sgi text-sgi"
                     : "border-transparent text-slate-500 hover:text-slate-700"
                 }`}
               >
-                {t} <span className="text-slate-400">[{statusCounts[t]}]</span>
+                {t}
               </button>
             );
           })}
@@ -177,36 +146,37 @@ export default function Screening() {
                   setTab("summary");
                   setConfirmDecline(false);
                 }}
-                className={`w-full text-left px-4 py-3 border-b border-slate-100 flex items-start gap-3 hover:bg-slate-50 transition ${
-                  isSel ? "bg-sgi-50/60 border-l-2 border-l-sgi" : ""
+                className={`w-full text-left px-5 py-4 border-b border-slate-100 flex items-center gap-3.5 hover:bg-slate-50/70 transition relative ${
+                  isSel ? "bg-sgi-50/30" : ""
                 }`}
               >
+                {isSel && (
+                  <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-sgi rounded-r" />
+                )}
                 <div
-                  className={`w-10 h-10 rounded-full grid place-items-center text-xs font-semibold shrink-0 ${
+                  className={`w-11 h-11 rounded-full grid place-items-center text-xs font-semibold shrink-0 ${
                     ko
                       ? "bg-slate-100 text-slate-400"
                       : c.match >= 90
-                      ? "bg-emerald-100 text-emerald-700"
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
                       : c.match >= 80
-                      ? "bg-sgi-100 text-sgi-700"
-                      : "bg-amber-100 text-amber-700"
+                      ? "bg-sgi-50 text-sgi-700 ring-1 ring-sgi-100"
+                      : "bg-amber-50 text-amber-700 ring-1 ring-amber-100"
                   }`}
                 >
                   {ko ? "—" : `${c.match}%`}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold text-slate-900 text-sm truncate">
-                      {c.name}
-                    </div>
-                    <StatusPill status={c.status} />
+                  <div className="font-semibold text-slate-900 text-sm truncate">
+                    {c.name}
                   </div>
-                  <div className="text-xs text-slate-500 truncate">{c.title}</div>
+                  <div className="text-xs text-slate-500 truncate mt-0.5">
+                    {c.title}
+                  </div>
                   <div className="text-[11px] text-slate-400 mt-0.5">
-                    {c.location} · {c.years} yrs
+                    {c.location}
                   </div>
                 </div>
-                <ChevronRight size={14} className="text-slate-300 mt-3" />
               </button>
             );
           })}
@@ -248,29 +218,25 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
+      {/* Header card */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 flex items-start justify-between gap-6">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5 mb-2">
             <h1 className="text-2xl font-semibold text-slate-900">{c.name}</h1>
-            {ko ? (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-medium">
-                Knocked out
-              </span>
-            ) : (
+            <StatusPill status={c.status} />
+            {!ko && (
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   c.match >= 90
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    : "bg-sgi-50 text-sgi-700 border border-sgi-200"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                    : "bg-sgi-50 text-sgi-700 border border-sgi-100"
                 }`}
               >
                 {c.match}% match
               </span>
             )}
-            <StatusPill status={c.status} large />
-
           </div>
-          <div className="text-sm text-slate-500 flex items-center gap-4 mt-1">
+          <div className="text-sm text-slate-500 flex flex-wrap items-center gap-x-5 gap-y-1.5">
             <span className="flex items-center gap-1.5">
               <Briefcase size={13} /> {c.title}
             </span>
@@ -284,7 +250,7 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
         </div>
 
         {c.status === "To Review" && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             {confirmDecline ? (
               <div className="flex items-center gap-2 bg-white border border-red-200 rounded-md px-3 py-1.5">
                 <span className="text-xs text-slate-700">Decline {c.name}?</span>
@@ -304,7 +270,7 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
             ) : (
               <button
                 onClick={() => setConfirmDecline(true)}
-                className="px-3.5 py-2 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-white"
+                className="px-3.5 py-2 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Decline
               </button>
@@ -325,8 +291,8 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="border-b border-slate-200 mb-6 flex gap-6">
+      {/* Underline tabs */}
+      <div className="border-b border-slate-200 mb-6 flex gap-7">
         {[
           { id: "summary", label: "AI Summary" },
           { id: "resume", label: "Resume" },
@@ -349,41 +315,49 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
 
       {tab === "summary" && (
         <div className="space-y-6">
-          <section className="bg-white border border-slate-200 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={15} className="text-sgi-500" />
-              <h2 className="font-semibold text-slate-900 text-sm">AI Summary</h2>
+          {/* AI Summary — gray bg, left blue accent */}
+          <section className="bg-slate-50 border border-slate-200 rounded-xl border-l-4 border-l-sgi p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={14} className="text-sgi" />
+              <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                AI Summary
+              </h2>
             </div>
             <p className="text-sm text-slate-700 leading-relaxed">{c.aiSummary}</p>
           </section>
 
+          {/* Screening Criteria — minimal */}
           <section className="bg-white border border-slate-200 rounded-xl p-5">
-            <h2 className="font-semibold text-slate-900 text-sm mb-3">Screening Criteria</h2>
-            <div className="grid grid-cols-2 gap-2">
+            <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-4">
+              Screening Criteria
+            </h2>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
               {Object.entries(c.checks).map(([k, v]) => (
-                <div
-                  key={k}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm ${
-                    v
-                      ? "bg-emerald-50 border-emerald-100 text-emerald-800"
-                      : "bg-red-50 border-red-100 text-red-700"
-                  }`}
-                >
-                  {v ? <Check size={15} /> : <X size={15} />}
-                  <span>{k}</span>
+                <div key={k} className="flex items-center gap-2.5 text-sm">
+                  {v ? (
+                    <Check size={15} className="text-emerald-500 shrink-0" />
+                  ) : (
+                    <X size={15} className="text-red-400 shrink-0" />
+                  )}
+                  <span className={v ? "text-slate-700" : "text-slate-400 line-through"}>
+                    {k}
+                  </span>
                 </div>
               ))}
             </div>
           </section>
 
+          {/* Work Experience — clean timeline */}
           <section className="bg-white border border-slate-200 rounded-xl p-5">
-            <h2 className="font-semibold text-slate-900 text-sm mb-4">Work Experience</h2>
-            <ol className="relative border-l-2 border-slate-100 ml-2 space-y-5">
+            <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-5">
+              Work Experience
+            </h2>
+            <ol className="relative ml-1.5 space-y-5 before:absolute before:left-[5px] before:top-1 before:bottom-1 before:w-px before:bg-slate-200">
               {c.experience.map((e, i) => (
-                <li key={i} className="ml-5">
-                  <div className="absolute -left-[7px] w-3 h-3 rounded-full bg-sgi-500 border-2 border-white" />
+                <li key={i} className="relative pl-6">
+                  <span className="absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-sgi" />
                   <div className="font-medium text-slate-900 text-sm">{e.role}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-slate-500 mt-0.5">
                     {e.company} · {e.years}
                   </div>
                 </li>
@@ -403,7 +377,9 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
           <div className="space-y-3 mb-5">
             {c.experience.map((e, i) => (
               <div key={i}>
-                <div className="font-medium">{e.role} — {e.company}</div>
+                <div className="font-medium">
+                  {e.role} — {e.company}
+                </div>
                 <div className="text-xs text-slate-500">{e.years}</div>
               </div>
             ))}
@@ -429,10 +405,10 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
 
       {tab === "activity" && (
         <section className="bg-white border border-slate-200 rounded-xl p-5">
-          <ol className="relative border-l-2 border-slate-100 ml-2 space-y-4">
+          <ol className="relative ml-1.5 space-y-4 before:absolute before:left-[5px] before:top-1 before:bottom-1 before:w-px before:bg-slate-200">
             {c.activity.map((a, i) => (
-              <li key={i} className="ml-5">
-                <div className="absolute -left-[7px] w-3 h-3 rounded-full bg-slate-300 border-2 border-white" />
+              <li key={i} className="relative pl-6">
+                <span className="absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-slate-300" />
                 <div className="text-sm text-slate-900">{a.text}</div>
                 <div className="text-xs text-slate-500">{a.date}</div>
               </li>
@@ -444,7 +420,7 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
   );
 }
 
-function StatusPill({ status, large = false }) {
+function StatusPill({ status }) {
   const map = {
     "To Review": "bg-amber-50 text-amber-700 border-amber-200",
     Screening: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -452,10 +428,9 @@ function StatusPill({ status, large = false }) {
     "Knocked Out": "bg-red-50 text-red-700 border-red-200",
   };
   const label = status === "Knocked Out" ? "Knocked out" : status;
-  const size = large ? "text-xs px-2 py-0.5" : "text-[10px] px-1.5 py-0.5";
   return (
     <span
-      className={`${size} rounded-full border font-medium shrink-0 ${
+      className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${
         map[status] || "bg-slate-100 text-slate-600 border-slate-200"
       }`}
     >
