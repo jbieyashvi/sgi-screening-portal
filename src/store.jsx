@@ -3,6 +3,13 @@ import { candidates as seedCandidates, requisitions } from "./data/mockData";
 
 const AppCtx = createContext(null);
 
+// recruiting pipeline progression
+const STAGE_FLOW = {
+  "To Review": { next: "Screening", toast: "Moved to Screening" },
+  Screening: { next: "Interview", toast: "Moved to Interview" },
+  Interview: { next: "Offer", toast: "Offer stage initiated" },
+};
+
 export function AppProvider({ children }) {
   const [candidates, setCandidates] = useState(seedCandidates);
   const [activeReq, setActiveReq] = useState("REQ-2715");
@@ -18,21 +25,45 @@ export function AppProvider({ children }) {
 
   const advanceCandidate = useCallback(
     (id) => {
+      let toast = null;
+      setCandidates((cs) =>
+        cs.map((c) => {
+          if (c.id !== id) return c;
+          const step = STAGE_FLOW[c.status];
+          if (!step) return c;
+          toast = step.toast;
+          return {
+            ...c,
+            status: step.next,
+            activity: [
+              ...c.activity,
+              { date: new Date().toISOString().slice(0, 10), text: `Advanced to ${step.next} by recruiter` },
+            ],
+          };
+        })
+      );
+      if (toast) showToast(toast);
+    },
+    [showToast]
+  );
+
+  const restoreCandidate = useCallback(
+    (id) => {
       setCandidates((cs) =>
         cs.map((c) =>
           c.id === id
             ? {
                 ...c,
-                status: "Screening",
+                status: "To Review",
                 activity: [
                   ...c.activity,
-                  { date: new Date().toISOString().slice(0, 10), text: "Advanced to Screening by recruiter" },
+                  { date: new Date().toISOString().slice(0, 10), text: "Restored to To Review by recruiter" },
                 ],
               }
             : c
         )
       );
-      showToast("Candidate advanced to Screening");
+      showToast("Candidate restored to To Review");
     },
     [showToast]
   );
@@ -66,6 +97,7 @@ export function AppProvider({ children }) {
         activeReq,
         setActiveReq,
         advanceCandidate,
+        restoreCandidate,
         declineCandidate,
         toasts,
         showToast,

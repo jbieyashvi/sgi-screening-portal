@@ -67,13 +67,50 @@ export const requisitions = [
   },
 ];
 
+// Deterministic generators so every candidate gets contact + source + salary
+// without hand-editing each record. Values are stable per id/name.
+const SOURCES = ["Indeed", "LinkedIn", "ZipRecruiter"];
+const AREA_CODES = [404, 470, 678, 770];
+
+const hashStr = (s) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+};
+
+const genEmail = (name) => {
+  const parts = name.toLowerCase().replace(/[^a-z\s]/g, "").split(/\s+/);
+  return `${parts[0]}.${parts[parts.length - 1]}@email.com`;
+};
+
+const genPhone = (seed) => {
+  const area = AREA_CODES[seed % AREA_CODES.length];
+  const mid = 200 + (seed % 700);
+  const last = 1000 + (seed % 9000);
+  return `(${area}) ${mid}-${last}`;
+};
+
+const genSalary = (years, match, seed) => {
+  const base =
+    92000 + (years || 4) * 6500 + Math.round((match || 70) / 10) * 1500 + (seed % 5) * 2000;
+  const rounded = Math.round(base / 1000) * 1000;
+  return `$${rounded.toLocaleString()}`;
+};
+
 // Helper: build a candidate with sensible defaults
-const make = (o) => ({
+const make = (o) => {
+  const seed = hashStr(o.id || o.name || "x");
+  return {
   reqId: "REQ-2715",
   sponsorship: false,
   hybridOK: true,
   sql: "Advanced",
   industry: "Insurance / Warranty",
+  email: genEmail(o.name),
+  phone: genPhone(seed),
+  appliedVia: SOURCES[seed % SOURCES.length],
+  desiredSalary: genSalary(o.years, o.match, seed),
+  aiReviewed: true,
   ...o,
   activity: o.activity || [
     { date: o.applied, text: "Applied via ADP" },
@@ -93,7 +130,8 @@ const make = (o) => ({
       ? [{ date: o.applied, text: "Declined by recruiter" }]
       : []),
   ],
-});
+  };
+};
 
 // ---------------- TO REVIEW ----------------
 const toReview = [
@@ -636,7 +674,138 @@ const knockedOut = [
   koTemplate("k8", "Nina Patel", "Data Scientist", "Phoenix, AZ", "2026-05-10", 6, "Out of state (AZ)"),
 ];
 
-export const candidates = [...toReview, ...screening, ...declined, ...knockedOut];
+// --------------- GENERATED candidates for other requisitions ---------------
+// Keeps the requisition dropdown counts real & the table filterable.
+const FIRST = [
+  "Olivia", "Liam", "Emma", "Noah", "Ava", "Ethan", "Sophia", "Mason", "Isabella",
+  "Lucas", "Mia", "Logan", "Charlotte", "Jackson", "Amelia", "Aiden", "Harper",
+  "Elijah", "Evelyn", "Caleb", "Abigail", "Owen", "Ella", "Wyatt", "Grace",
+  "Carter", "Chloe", "Julian", "Zoe", "Henry", "Layla", "Leo",
+];
+const LAST = [
+  "Bennett", "Foster", "Hayes", "Coleman", "Reyes", "Sanders", "Powell", "Long",
+  "Patterson", "Hughes", "Flores", "Butler", "Simmons", "Bryant", "Russell",
+  "Griffin", "Diaz", "Myers", "Ford", "Hamilton", "Graham", "Sullivan", "Wallace",
+  "West", "Owens", "Reynolds", "Fisher", "Ellis", "Harrison", "Gibson", "Cruz",
+  "Marshall",
+];
+const COMPANIES = ["Aflac", "Truist", "Cox", "Mailchimp", "Equifax", "Home Depot", "UPS", "Delta", "Chick-fil-A", "NCR"];
+const OOS = ["Dallas, TX", "Charlotte, NC", "Nashville, TN", "Memphis, TN", "Tampa, FL", "Columbia, SC"];
+const STATUS_CYCLE = ["To Review", "Screening", "To Review", "Declined", "To Review", "Screening", "Knocked Out", "To Review"];
+
+const genReqCandidates = ({ reqId, count, title, base }, offset) => {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const idx = offset + i;
+    const name = `${FIRST[idx % FIRST.length]} ${LAST[(idx * 3) % LAST.length]}`;
+    const status = STATUS_CYCLE[i % STATUS_CYCLE.length];
+    const ko = status === "Knocked Out";
+    const years = 3 + (idx % 9);
+    const match = ko ? null : 62 + ((idx * 7) % 36);
+    const loc = ko ? OOS[idx % OOS.length] : base;
+    const day = String(25 - (idx % 23)).padStart(2, "0");
+    out.push(
+      make({
+        id: `${reqId}-${i + 1}`,
+        reqId,
+        name,
+        title,
+        location: loc,
+        applied: `2026-05-${day}`,
+        years,
+        match,
+        status,
+        knockoutReason: ko ? "Out of state — role requires onsite presence" : undefined,
+        aiSummary: ko
+          ? `${name} has ${years} years of relevant experience but is based out of state. AI flagged automatically — role requires onsite presence.`
+          : `${name} brings ${years} years of experience relevant to the ${title} role. AI screened at ${match}% based on skills, location, and availability.`,
+        checks: {
+          Location: !ko,
+          Sponsorship: true,
+          Hybrid: !ko,
+          Experience: years >= 5,
+          SQL: idx % 2 === 0,
+          "Industry match": idx % 3 !== 0,
+        },
+        experience: [
+          { role: title, company: COMPANIES[idx % COMPANIES.length], years: `${2026 - Math.min(years, 5)} – Present` },
+          { role: "Associate", company: COMPANIES[(idx + 3) % COMPANIES.length], years: `${2026 - years} – ${2026 - Math.min(years, 5)}` },
+        ],
+        screening: [
+          { q: "Open to onsite / hybrid schedule?", a: ko ? "No" : "Yes" },
+          { q: "Years of experience?", a: String(years) },
+        ],
+      })
+    );
+  }
+  return out;
+};
+
+const REQ_GEN = [
+  { reqId: "REQ-2701", count: 18, title: "Regional Performance Manager", base: "Austin, TX" },
+  { reqId: "REQ-2698", count: 12, title: "BSC Representative", base: "Greenville, SC" },
+  { reqId: "REQ-2690", count: 8, title: "Field Sales Rep", base: "Austin, TX" },
+];
+
+let _genOffset = 0;
+const generated = REQ_GEN.flatMap((cfg) => {
+  const list = genReqCandidates(cfg, _genOffset);
+  _genOffset += cfg.count;
+  return list;
+});
+
+// Extra "To Review" candidates for REQ-2715 so that stage totals 30
+// (8 hand-written + 22 generated here).
+const TR_TITLES = ["Data Analyst", "Senior Data Analyst", "BI Analyst", "Analytics Engineer", "Reporting Analyst"];
+const TR_LOCS = [
+  "Atlanta, GA", "Marietta, GA", "Alpharetta, GA", "Duluth, GA",
+  "Roswell, GA", "Sandy Springs, GA", "Kennesaw, GA", "Decatur, GA",
+];
+const extraToReview = Array.from({ length: 22 }, (_, i) => {
+  const idx = 100 + i;
+  const name = `${FIRST[idx % FIRST.length]} ${LAST[(idx * 5) % LAST.length]}`;
+  const years = 3 + (idx % 9);
+  const match = 60 + ((idx * 7) % 38);
+  const title = TR_TITLES[idx % TR_TITLES.length];
+  const day = String(25 - (idx % 23)).padStart(2, "0");
+  return make({
+    id: `tr-${i + 1}`,
+    reqId: "REQ-2715",
+    name,
+    title,
+    location: TR_LOCS[idx % TR_LOCS.length],
+    applied: `2026-05-${day}`,
+    years,
+    match,
+    status: "To Review",
+    aiSummary: `${name} has ${years} years of analytics experience. AI screened at ${match}% based on skills, location, and availability.`,
+    checks: {
+      Location: true,
+      Sponsorship: true,
+      Hybrid: true,
+      Experience: years >= 5,
+      SQL: idx % 2 === 0,
+      "Industry match": idx % 3 !== 0,
+    },
+    experience: [
+      { role: title, company: COMPANIES[idx % COMPANIES.length], years: `${2026 - Math.min(years, 5)} – Present` },
+      { role: "Analyst", company: COMPANIES[(idx + 4) % COMPANIES.length], years: `${2026 - years} – ${2026 - Math.min(years, 5)}` },
+    ],
+    screening: [
+      { q: "Open to hybrid?", a: "Yes" },
+      { q: "Years of experience?", a: String(years) },
+    ],
+  });
+});
+
+export const candidates = [
+  ...toReview,
+  ...extraToReview,
+  ...screening,
+  ...declined,
+  ...knockedOut,
+  ...generated,
+];
 
 export const funnel = [
   { stage: "Applied", count: 1474 },

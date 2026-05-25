@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -6,13 +6,9 @@ import {
   Briefcase,
   Upload,
   BarChart3,
-  Bell,
-  ChevronDown,
   PanelLeftClose,
   PanelLeft,
-  Check,
 } from "lucide-react";
-import { useApp } from "../store";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -23,24 +19,7 @@ const nav = [
 ];
 
 export default function Layout() {
-  const { requisitions, activeReq, setActiveReq } = useApp();
-  const active = requisitions.find((r) => r.id === activeReq);
   const [collapsed, setCollapsed] = useState(false);
-  const [reqOpen, setReqOpen] = useState(false);
-  const reqRef = useRef(null);
-
-  useEffect(() => {
-    if (!reqOpen) return;
-    const onClick = (e) => {
-      if (reqRef.current && !reqRef.current.contains(e.target)) {
-        setReqOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [reqOpen]);
-
-  const openReqs = requisitions.filter((r) => r.status === "Active");
 
   return (
     <div className="min-h-screen flex bg-white text-[#1a1a1a]">
@@ -135,86 +114,9 @@ export default function Layout() {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-12 bg-white border-b border-[#f0f0f0] px-5 flex items-center gap-4">
-          <div className="relative" ref={reqRef}>
-            <button
-              onClick={() => setReqOpen((o) => !o)}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition ${
-                reqOpen ? "bg-[#F0F4FF]" : "hover:bg-[#F7FAFC]"
-              }`}
-            >
-              <span className="text-[11px] font-semibold text-[#185FA5]">
-                {active?.id}
-              </span>
-              <span className="text-[13px] font-semibold text-[#1a1a1a]">
-                {active?.title}
-              </span>
-              <ChevronDown
-                size={13}
-                className={`text-[#888] transition-transform ${
-                  reqOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {reqOpen && (
-              <div className="absolute left-0 top-full mt-1.5 z-30 w-[320px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.1)] p-1">
-                {openReqs.map((r) => {
-                  const sel = r.id === activeReq;
-                  return (
-                    <button
-                      key={r.id}
-                      onClick={() => {
-                        setActiveReq(r.id);
-                        setReqOpen(false);
-                      }}
-                      className={`w-full text-left rounded-md px-3 py-2 transition flex items-start justify-between gap-3 ${
-                        sel ? "bg-[#F0F4FF]" : "hover:bg-[#F0F4FF]"
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[11px] font-semibold text-[#185FA5]">
-                            {r.id}
-                          </span>
-                          <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5 uppercase tracking-wide">
-                            {r.status}
-                          </span>
-                        </div>
-                        <div className="text-[13px] font-semibold text-[#1a1a1a] truncate">
-                          {r.title}
-                          <span className="text-[11px] font-normal text-[#888]">
-                            {" "}· {r.location}
-                          </span>
-                        </div>
-                      </div>
-                      {sel && (
-                        <Check size={14} className="text-[#185FA5] shrink-0 mt-0.5" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          {active && (
-            <div className="text-[12px] text-[#888]">
-              {active.location} · {active.applicants} applicants
-            </div>
-          )}
-
-          <div className="flex-1" />
-
-          <button className="p-1.5 rounded text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]">
-            <Bell size={15} />
-          </button>
-        </header>
-
-        <main className="flex-1 overflow-auto">
-          <Outlet />
-        </main>
-      </div>
+      <main className="flex-1 overflow-auto min-w-0">
+        <Outlet />
+      </main>
     </div>
   );
 }
