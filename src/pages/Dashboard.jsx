@@ -47,15 +47,15 @@ export default function Dashboard() {
         <div className="flex gap-2">
           <button
             onClick={() => showToast("ADP sync complete — 4 reqs updated")}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="h-8 px-3.5 inline-flex items-center gap-2 bg-white border border-[#E2E8F0] rounded-md text-[13px] font-medium text-[#4A5568] hover:bg-[#F7FAFC]"
           >
-            <RefreshCw size={15} /> Sync ADP
+            <RefreshCw size={14} /> Sync ADP
           </button>
           <Link
             to="/upload"
-            className="flex items-center gap-2 px-4 py-2 bg-sgi text-white rounded-md text-sm font-medium hover:bg-sgi-600"
+            className="h-8 px-3.5 inline-flex items-center gap-2 bg-[#185FA5] text-white rounded-md text-[13px] font-medium hover:bg-[#134C84]"
           >
-            <Upload size={15} /> Upload Resumes
+            <Upload size={14} /> Upload Resumes
           </Link>
         </div>
       </div>

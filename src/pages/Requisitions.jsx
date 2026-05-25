@@ -46,9 +46,9 @@ export default function Requisitions() {
         </div>
         <button
           onClick={() => showToast("ADP sync complete — 6 reqs updated")}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="h-8 px-3.5 inline-flex items-center gap-2 bg-white border border-[#E2E8F0] rounded-md text-[13px] font-medium text-[#4A5568] hover:bg-[#F7FAFC]"
         >
-          <RefreshCw size={15} /> Sync ADP now
+          <RefreshCw size={14} /> Sync ADP now
         </button>
       </div>
 

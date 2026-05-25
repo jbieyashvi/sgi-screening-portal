@@ -85,7 +85,7 @@ export default function Upload() {
         <div className="text-sm text-slate-500 mb-4">
           PDF, ZIP, or bulk uploads · max 200MB
         </div>
-        <button className="px-4 py-2 bg-sgi text-white rounded-md text-sm font-medium hover:bg-sgi-600">
+        <button className="h-8 px-3.5 inline-flex items-center bg-[#185FA5] text-white rounded-md text-[13px] font-medium hover:bg-[#134C84]">
           Browse files
         </button>
       </div>
