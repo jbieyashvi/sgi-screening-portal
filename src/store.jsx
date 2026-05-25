@@ -53,7 +53,7 @@ export function AppProvider({ children }) {
             : c
         )
       );
-      showToast("Candidate declined", "error");
+      showToast("Application declined successfully");
     },
     [showToast]
   );

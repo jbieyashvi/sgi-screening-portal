@@ -4,7 +4,15 @@ import {
   Check,
   X,
   SlidersHorizontal,
-  AlertTriangle,
+  Info,
+  ChevronDown,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Type,
+  Settings,
 } from "lucide-react";
 import { useApp } from "../store";
 
@@ -46,6 +54,8 @@ export default function Screening() {
   const [selectedId, setSelectedId] = useState(null);
   const [tab, setTab] = useState("summary");
   const [confirmDecline, setConfirmDecline] = useState(false);
+  const [bulkDecline, setBulkDecline] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef(null);
 
@@ -116,7 +126,7 @@ export default function Screening() {
   return (
     <div className="flex h-[calc(100vh-48px)] bg-white">
       {/* Left panel */}
-      <div className="w-[360px] border-r border-[#f0f0f0] flex flex-col">
+      <div className="w-[380px] shrink-0 border-r border-[#f0f0f0] flex flex-col">
         {/* Search + filters */}
         <div className="px-3 pt-3 pb-2">
           <div className="flex items-center gap-2">
@@ -127,7 +137,7 @@ export default function Screening() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Try: Top 5 in Atlanta with 5+ years analytics..."
+                  placeholder="Try: Top 5 in Atlanta with 5+ years analytics"
                   className="flex-1 min-w-0 bg-transparent border-0 pl-2 pr-1 py-0 text-[13px] text-[#1a1a1a] placeholder:italic placeholder:text-sgi-300 focus:outline-none"
                 />
                 <span className="shrink-0 text-[9px] font-bold tracking-wide bg-sgi text-white px-1.5 py-0.5 rounded">
@@ -190,15 +200,16 @@ export default function Screening() {
           </div>
         </div>
 
-        {/* Status tabs — Linear style */}
-        <div className="border-b border-[#f0f0f0] flex">
+        {/* Status tabs */}
+        <div className="border-b border-[#f0f0f0] flex gap-1">
           {STATUS_TABS.map((t) => {
             const on = statusFilter === t;
             return (
               <button
                 key={t}
                 onClick={() => setStatusFilter(t)}
-                className={`flex-1 basis-0 min-w-0 text-[10px] uppercase font-semibold text-center px-1 py-2 border-b-2 -mb-px transition whitespace-nowrap ${
+                style={{ letterSpacing: "0.03em" }}
+                className={`flex-1 basis-0 min-w-0 text-[11px] uppercase font-semibold text-center px-2 py-2 border-b-2 -mb-px transition whitespace-nowrap ${
                   on
                     ? "border-sgi text-[#1a1a1a]"
                     : "border-transparent text-[#888] hover:text-[#1a1a1a]"
@@ -211,26 +222,83 @@ export default function Screening() {
           })}
         </div>
 
+        {/* Select All header */}
+        <SelectAllHeader
+          ids={sorted.map((c) => c.id)}
+          selectedIds={selectedIds}
+          setSelectedIds={setSelectedIds}
+        />
+
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center justify-between gap-2 h-9 px-3 bg-[#F8F9FA] border-b border-[#E2E8F0] whitespace-nowrap">
+            <span className="text-[12px] text-[#6B7280] shrink-0">
+              — {selectedIds.size} of {sorted.length} selected
+            </span>
+            <div className="flex items-center gap-2 shrink-0 text-[12px]">
+              <button
+                onClick={() => setBulkDecline(true)}
+                className="text-[#DC2626] hover:underline"
+              >
+                Decline
+              </button>
+              <span className="text-[#E2E8F0]">|</span>
+              <button
+                onClick={() => {
+                  selectedIds.forEach((id) => advanceCandidate(id));
+                  setSelectedIds(new Set());
+                }}
+                className="text-[#185FA5] hover:underline"
+              >
+                Advance
+              </button>
+              <span className="text-[#E2E8F0]">|</span>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="text-[#6B7280] hover:underline"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Candidate list */}
         <div className="flex-1 overflow-auto">
           {sorted.map((c) => {
             const ko = c.status === "Knocked Out";
             const isSel = selected?.id === c.id;
+            const checked = selectedIds.has(c.id);
             return (
-              <button
+              <div
                 key={c.id}
                 onClick={() => {
                   setSelectedId(c.id);
                   setTab("summary");
                   setConfirmDecline(false);
                 }}
-                className={`w-full text-left pl-2.5 pr-3 py-1.5 border-b border-[#f5f5f5] flex items-center gap-2.5 transition relative ${
+                className={`group w-full text-left pl-2.5 pr-3 py-1.5 border-b border-[#f5f5f5] flex items-center gap-2.5 transition relative cursor-pointer ${
                   isSel ? "bg-[#f8faff]" : "hover:bg-[#fafafa]"
                 }`}
               >
                 {isSel && (
                   <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-sgi" />
                 )}
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => {
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(c.id)) next.delete(c.id);
+                      else next.add(c.id);
+                      return next;
+                    });
+                  }}
+                  className="minicheck"
+                  aria-label={`Select ${c.name}`}
+                />
                 <div
                   className={`shrink-0 w-8 text-[11px] font-semibold text-right tabular-nums ${
                     ko
@@ -255,7 +323,7 @@ export default function Screening() {
                     {c.title} <span className="text-[#bbb]">· {c.location}</span>
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
           {sorted.length === 0 && (
@@ -287,6 +355,18 @@ export default function Screening() {
           </div>
         )}
       </div>
+
+      {bulkDecline && (
+        <DeclineModal
+          count={selectedIds.size}
+          onCancel={() => setBulkDecline(false)}
+          onConfirm={() => {
+            selectedIds.forEach((id) => declineCandidate(id));
+            setSelectedIds(new Set());
+            setBulkDecline(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -302,14 +382,14 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
   ];
 
   return (
-    <div className="px-10 py-8 max-w-4xl mx-auto">
+    <div className="px-8 pt-6 pb-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between gap-6 mb-8">
+      <div className="flex items-start justify-between gap-6 mb-4">
         <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold text-[#1a1a1a] leading-tight">
+          <h1 className="text-[24px] font-semibold text-[#1a1a1a] leading-tight">
             {c.name}
           </h1>
-          <div className="flex items-center gap-3 mt-2 text-[12px] text-[#888]">
+          <div className="flex items-center gap-3 mt-3 text-[12px] text-[#888]">
             <DotBadge status={c.status} />
             {!ko && (
               <span
@@ -352,7 +432,6 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
 
       {confirmDecline && (
         <DeclineModal
-          name={c.name}
           onCancel={() => setConfirmDecline(false)}
           onConfirm={onDecline}
         />
@@ -366,7 +445,7 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
       )}
 
       {/* Tabs */}
-      <div className="border-b border-[#f0f0f0] mb-8 flex gap-1">
+      <div className="border-b border-[#f0f0f0] mt-4 mb-4 flex gap-1">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -383,7 +462,7 @@ function Detail({ c, tab, setTab, onAdvance, confirmDecline, setConfirmDecline, 
       </div>
 
       {tab === "summary" && (
-        <div className="space-y-10">
+        <div className="space-y-6">
           {/* AI Summary */}
           <section>
             <SectionTitle icon={<Sparkles size={11} />} label="AI Summary" />
@@ -497,7 +576,27 @@ function SectionTitle({ icon, label }) {
   );
 }
 
-function DeclineModal({ name, onCancel, onConfirm }) {
+const ACTION_OPTIONS = [
+  { id: "reject", label: "Reject", status: "Rejected" },
+  { id: "mark", label: "Mark for Rejection", status: "Marked for Rejection" },
+  { id: "keep", label: "Keep On File", status: "Kept on File" },
+];
+
+const DISPOSITION_CODES = [
+  "Not Qualified",
+  "Position Filled",
+  "Overqualified",
+  "Location Mismatch",
+  "Sponsorship Required",
+];
+
+function DeclineModal({ onCancel, onConfirm, count = 1 }) {
+  const [action, setAction] = useState("reject");
+  const [disposition, setDisposition] = useState("Not Qualified");
+  const [dispoOpen, setDispoOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const dispoRef = useRef(null);
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onCancel();
@@ -506,6 +605,19 @@ function DeclineModal({ name, onCancel, onConfirm }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onCancel]);
 
+  useEffect(() => {
+    if (!dispoOpen) return;
+    const onClick = (e) => {
+      if (dispoRef.current && !dispoRef.current.contains(e.target)) {
+        setDispoOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [dispoOpen]);
+
+  const selectedAction = ACTION_OPTIONS.find((a) => a.id === action);
+
   return (
     <div
       onClick={onCancel}
@@ -513,43 +625,231 @@ function DeclineModal({ name, onCancel, onConfirm }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-[380px] max-w-full bg-white rounded-[12px] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)] p-6"
+        className="relative w-[540px] max-w-full bg-white rounded-[12px] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)] overflow-hidden"
       >
-        <button
-          onClick={onCancel}
-          className="absolute top-3 right-3 p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]"
-          aria-label="Close"
-        >
-          <X size={15} />
-        </button>
-
-        <div className="w-10 h-10 rounded-full bg-red-50 grid place-items-center mb-4">
-          <AlertTriangle size={18} className="text-red-600" />
-        </div>
-
-        <h3 className="text-[16px] font-semibold text-[#1a1a1a] mb-1.5">
-          Decline Candidate
-        </h3>
-        <p className="text-[13px] text-[#666] leading-relaxed mb-6">
-          Are you sure you want to decline <span className="font-medium text-[#1a1a1a]">{name}</span>?
-          This action can be undone by changing their status later.
-        </p>
-
-        <div className="flex justify-end gap-2">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f0]">
+          <h3 className="text-[15px] font-semibold text-[#1a1a1a]">
+            Decline Application
+          </h3>
           <button
             onClick={onCancel}
-            className="h-8 px-3.5 inline-flex items-center bg-white border border-[#E2E8F0] text-[#4A5568] rounded-md text-[13px] font-medium hover:bg-[#F7FAFC]"
+            className="p-1 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]"
+            aria-label="Close"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-6 py-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          {/* Info bar */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-[#EAF2FB] border border-[#CFE0F2] rounded-md">
+            <Info size={13} className="text-[#185FA5] shrink-0" />
+            <span className="text-[12px] text-[#1a1a1a]">
+              You've selected {count} application{count === 1 ? "" : "s"}.
+            </span>
+          </div>
+
+          {/* Select action */}
+          <div>
+            <div className="text-[11px] uppercase tracking-wider font-medium text-[#888] mb-2">
+              Select Action
+            </div>
+            <div className="space-y-1.5">
+              {ACTION_OPTIONS.map((opt) => {
+                const on = action === opt.id;
+                return (
+                  <label
+                    key={opt.id}
+                    className="flex items-center gap-2.5 cursor-pointer text-[13px] text-[#1a1a1a]"
+                  >
+                    <input
+                      type="radio"
+                      name="decline-action"
+                      checked={on}
+                      onChange={() => setAction(opt.id)}
+                      className="w-3.5 h-3.5 accent-[#185FA5]"
+                    />
+                    {opt.label}
+                  </label>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[12px] text-[#185FA5]">
+              Application status will be marked as '{selectedAction.status}'.
+            </p>
+          </div>
+
+          {/* Disposition code */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider font-medium text-[#888] mb-1.5">
+              Disposition Code
+            </label>
+            <div className="relative" ref={dispoRef}>
+              <button
+                type="button"
+                onClick={() => setDispoOpen((o) => !o)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-white border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] hover:border-[#cbd5e0] focus:outline-none focus:border-[#185FA5] focus:shadow-[0_0_0_3px_rgba(24,95,165,0.12)]"
+              >
+                <span>{disposition}</span>
+                <ChevronDown size={14} className="text-[#888]" />
+              </button>
+              {dispoOpen && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-10 bg-white border border-[#ececec] rounded-md shadow-[0_4px_16px_rgba(0,0,0,0.08)] py-1">
+                  {DISPOSITION_CODES.map((code) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => {
+                        setDisposition(code);
+                        setDispoOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#f8faff] ${
+                        code === disposition ? "text-[#185FA5] font-medium" : "text-[#1a1a1a]"
+                      }`}
+                    >
+                      {code}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Notification */}
+          <div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-wider font-medium text-[#888] mb-1">
+                  Template to notify candidate
+                </div>
+                <div className="text-[13px] text-[#1a1a1a]">-</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wider font-medium text-[#888] mb-1">
+                  Scheduled to be sent
+                </div>
+                <div className="text-[13px] text-[#1a1a1a]">
+                  After 1 Day(s) (May 26, 2026) at 12 PM (ET)
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end mt-1.5">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-[12px] text-[#185FA5] hover:underline"
+              >
+                <Settings size={12} />
+                Manage Notification
+              </button>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <div className="text-[11px] uppercase tracking-wider font-medium text-[#888] mb-1.5">
+              Notes
+            </div>
+            <div className="border border-[#E2E8F0] rounded-md focus-within:border-[#185FA5] focus-within:shadow-[0_0_0_3px_rgba(24,95,165,0.12)]">
+              <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-[#E2E8F0] bg-[#fafafa]">
+                <ToolbarBtn><Bold size={12} /></ToolbarBtn>
+                <ToolbarBtn><Italic size={12} /></ToolbarBtn>
+                <ToolbarBtn><Underline size={12} /></ToolbarBtn>
+                <span className="w-px h-3.5 bg-[#e0e0e0] mx-1" />
+                <ToolbarBtn><Type size={12} /></ToolbarBtn>
+                <span className="w-px h-3.5 bg-[#e0e0e0] mx-1" />
+                <ToolbarBtn><List size={12} /></ToolbarBtn>
+                <ToolbarBtn><ListOrdered size={12} /></ToolbarBtn>
+              </div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value.slice(0, 10000))}
+                placeholder="Type something..."
+                className="w-full min-h-[120px] px-3 py-2 text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none rounded-b-md"
+              />
+              <div className="flex justify-end px-2 pb-1.5 text-[11px] text-[#888]">
+                {notes.length}/10000
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#f0f0f0] bg-[#fafafa]">
+          <button
+            onClick={onCancel}
+            className="h-9 px-4 inline-flex items-center bg-white border border-[#E2E8F0] text-[#4A5568] rounded-md text-[13px] font-medium hover:bg-[#F7FAFC]"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="h-8 px-3.5 inline-flex items-center bg-[#DC2626] text-white rounded-md text-[13px] font-medium hover:bg-[#B91C1C]"
+            className="h-9 px-4 inline-flex items-center bg-[#185FA5] text-white rounded-md text-[13px] font-medium hover:bg-[#134C84]"
           >
-            Decline
+            Decline Applications
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ToolbarBtn({ children }) {
+  return (
+    <button
+      type="button"
+      className="p-1 rounded text-[#666] hover:bg-[#ececec] hover:text-[#1a1a1a]"
+    >
+      {children}
+    </button>
+  );
+}
+
+function SelectAllHeader({ ids, selectedIds, setSelectedIds }) {
+  const ref = useRef(null);
+  const total = ids.length;
+  const selectedInView = ids.filter((id) => selectedIds.has(id)).length;
+  const all = total > 0 && selectedInView === total;
+  const some = selectedInView > 0 && !all;
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = some;
+  }, [some]);
+
+  const onToggle = () => {
+    if (all || some) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-3 py-1 border-b border-[#f0f0f0] whitespace-nowrap">
+      <label className="flex items-center gap-2 cursor-pointer shrink-0">
+        <input
+          ref={ref}
+          type="checkbox"
+          checked={all}
+          onChange={onToggle}
+          className="minicheck"
+          aria-label="Select all"
+        />
+        <span className="text-[12px] text-[#888]">Select All</span>
+      </label>
+      {selectedInView > 0 && (
+        <span className="text-[11px] text-[#888] shrink-0">
+          {selectedInView} of {total} selected
+        </span>
+      )}
     </div>
   );
 }
