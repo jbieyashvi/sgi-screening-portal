@@ -47,6 +47,23 @@ export function AppProvider({ children }) {
     [showToast]
   );
 
+  const setCandidateStage = useCallback((id, stage) => {
+    setCandidates((cs) =>
+      cs.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              status: stage,
+              activity: [
+                ...c.activity,
+                { date: new Date().toISOString().slice(0, 10), text: `Moved to ${stage} by recruiter` },
+              ],
+            }
+          : c
+      )
+    );
+  }, []);
+
   const restoreCandidate = useCallback(
     (id) => {
       setCandidates((cs) =>
@@ -97,6 +114,7 @@ export function AppProvider({ children }) {
         activeReq,
         setActiveReq,
         advanceCandidate,
+        setCandidateStage,
         restoreCandidate,
         declineCandidate,
         toasts,

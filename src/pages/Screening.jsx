@@ -145,7 +145,7 @@ const STAT_CARDS = [
 /* ================================ page =================================== */
 
 export default function Screening() {
-  const { candidates, requisitions, advanceCandidate, restoreCandidate, declineCandidate, showToast } =
+  const { candidates, requisitions, advanceCandidate, setCandidateStage, restoreCandidate, declineCandidate, showToast } =
     useApp();
 
   const [reqFilter, setReqFilter] = useState("REQ-2715");
@@ -155,7 +155,9 @@ export default function Screening() {
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDecline, setBulkDecline] = useState(false);
+  const [bulkAdvOpen, setBulkAdvOpen] = useState(false);
   const [declineTarget, setDeclineTarget] = useState(null);
+  const bulkAdvRef = useRef(null);
   const [focusOpen, setFocusOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(0);
 
@@ -181,6 +183,7 @@ export default function Screening() {
   useOutside(colsRef, colsOpen, () => setColsOpen(false));
   useOutside(reqRef, reqOpen, () => setReqOpen(false));
   useOutside(rppRef, rppOpen, () => setRppOpen(false));
+  useOutside(bulkAdvRef, bulkAdvOpen, () => setBulkAdvOpen(false));
 
   const isColVisible = (key) => !hiddenCols.has(key);
 
@@ -680,13 +683,13 @@ export default function Screening() {
 
       {/* --------------------- bulk action bar (above pagination) -------- */}
       <div
-        className={`shrink-0 overflow-hidden transition-[height] duration-200 ease-out ${
+        className={`shrink-0 transition-[height] duration-200 ease-out ${
           selectedIds.size > 0
-            ? "h-[52px] border-t border-[#E2E8F0] shadow-[0_-4px_12px_rgba(0,0,0,0.1)]"
-            : "h-0"
+            ? "h-[52px] border-t border-[#C7D9F8] shadow-[0_-4px_12px_rgba(0,0,0,0.1)]"
+            : "h-0 overflow-hidden"
         }`}
       >
-        <div className="h-[52px] bg-white px-6 flex items-center justify-between">
+        <div className="h-[52px] bg-[#EEF4FF] px-6 flex items-center justify-between">
           <div className="flex items-center gap-3 text-[13px]">
             <span className="font-medium text-[#1a1a1a]">
               {selectedIds.size} candidate{selectedIds.size === 1 ? "" : "s"} selected
@@ -700,16 +703,38 @@ export default function Screening() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => {
-                selectedIds.forEach((id) => advanceCandidate(id));
-                setSelectedIds(new Set());
-              }}
-              className="flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
-            >
-              Advance Selected
-              <ChevronDown size={14} />
-            </button>
+            <div className="relative" ref={bulkAdvRef}>
+              <button
+                onClick={() => setBulkAdvOpen((o) => !o)}
+                className="flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
+              >
+                Advance Selected
+                <ChevronDown size={14} className={`transition-transform ${bulkAdvOpen ? "rotate-180" : ""}`} />
+              </button>
+              {bulkAdvOpen && (
+                <div className="absolute right-0 bottom-full mb-1.5 z-40 w-[200px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.12)] py-1.5">
+                  {[
+                    { stage: "Screening", label: "Move to Screening" },
+                    { stage: "Interview", label: "Move to Interview" },
+                    { stage: "Offer", label: "Move to Offer" },
+                  ].map((o) => (
+                    <button
+                      key={o.stage}
+                      onClick={() => {
+                        const n = selectedIds.size;
+                        selectedIds.forEach((id) => setCandidateStage(id, o.stage));
+                        setSelectedIds(new Set());
+                        setBulkAdvOpen(false);
+                        showToast(`${n} candidate${n === 1 ? "" : "s"} moved to ${o.stage}`);
+                      }}
+                      className="block w-full text-left text-[13px] text-[#1a1a1a] px-4 py-2 hover:bg-[#EEF4FF]"
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               onClick={() => setBulkDecline(true)}
               className="h-8 px-3.5 rounded-md bg-white border border-[#DC2626] text-[#DC2626] text-[13px] font-medium hover:bg-red-50 transition"
