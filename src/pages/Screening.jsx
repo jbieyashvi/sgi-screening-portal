@@ -163,7 +163,7 @@ export default function Screening() {
   // column filters (applied sets)
   const [srcF, setSrcF] = useState(() => new Set());
   const [locF, setLocF] = useState(() => new Set());
-  const [stageF, setStageF] = useState(() => new Set());
+  const [stageF, setStageF] = useState(() => new Set(["To Review"]));
   const [matchF, setMatchF] = useState(() => new Set());
   const [salaryF, setSalaryF] = useState(() => new Set());
   const [openFilter, setOpenFilter] = useState(null); // "source" | "location" | "stage" | "match" | "salary" | null
