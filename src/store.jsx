@@ -152,7 +152,7 @@ function ToastStack({ toasts }) {
         <div
           key={t.id}
           className={`${t.leaving ? "toast-out" : "toast-in"} flex items-center gap-2 min-w-[200px] max-w-[300px] px-3.5 py-2 rounded-md text-white text-[13px] font-medium shadow-[0_4px_12px_rgba(0,0,0,0.2)] ${
-            t.type === "error" ? "bg-[#DC2626]" : "bg-[#185FA5]"
+            t.type === "error" ? "bg-[#DC2626]" : "bg-[#2563EB]"
           }`}
         >
           <Check size={14} className="shrink-0" />

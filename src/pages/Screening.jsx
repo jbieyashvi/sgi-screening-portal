@@ -15,7 +15,6 @@ import {
   MapPin,
   Columns3,
   Eye,
-  Star,
   Info,
 } from "lucide-react";
 import { useApp } from "../store";
@@ -300,8 +299,39 @@ export default function Screening() {
   const colSpanCount =
     1 + 1 + COLUMNS.filter((c) => isColVisible(c.key)).length + 1; // checkbox + name + visible data cols + actions
 
+  // active filters — grouped by type, with an individually-removable pill per value
+  const optLabel = (opts, v) => opts.find((o) => o.value === v)?.label ?? v;
+  const removeFromSet = (setter, v) =>
+    setter((prev) => {
+      const n = new Set(prev);
+      n.delete(v);
+      return n;
+    });
+  const filterGroups = [
+    { id: "src", name: "Applied Via", set: srcF, fmt: (v) => v, setter: setSrcF },
+    { id: "loc", name: "Location", set: locF, fmt: (v) => v, setter: setLocF },
+    { id: "stg", name: "Stage", set: stageF, fmt: (v) => optLabel(STAGE_FILTER_OPTS, v), setter: setStageF },
+    { id: "mat", name: "Match", set: matchF, fmt: (v) => optLabel(MATCH_FILTER_OPTS, v), setter: setMatchF },
+    { id: "sal", name: "Desired Salary", set: salaryF, fmt: (v) => optLabel(SALARY_FILTER_OPTS, v), setter: setSalaryF },
+  ]
+    .filter((g) => g.set.size > 0)
+    .map((g) => ({
+      id: g.id,
+      name: g.name,
+      values: [...g.set].map((v) => ({ raw: v, label: g.fmt(v), remove: () => removeFromSet(g.setter, v) })),
+    }));
+  const clearAllFilters = () => {
+    setSrcF(new Set());
+    setLocF(new Set());
+    setStageF(new Set());
+    setMatchF(new Set());
+    setSalaryF(new Set());
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex h-screen bg-white">
+      {/* LEFT: table column (shrinks when drawer open) */}
+      <div className="flex-1 flex flex-col min-w-0">
       {/* ---------------------------- top bar ---------------------------- */}
       <div className="px-5 pt-4 pb-3 border-b border-[#f0f0f0]">
         <div className="flex items-center gap-4 flex-wrap">
@@ -357,7 +387,7 @@ export default function Screening() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search candidates by name, email..."
-              className="w-full h-8 pl-9 pr-3 bg-white border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(24,95,165,0.1)]"
+              className="w-full h-8 pl-9 pr-3 bg-white border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.1)]"
             />
           </div>
 
@@ -432,6 +462,37 @@ export default function Screening() {
             Ask AI
           </button>
         </div>
+
+        {/* -------------------- active filter chips -------------------- */}
+        {filterGroups.length > 0 && (
+          <div className="mt-3 flex items-center flex-wrap gap-x-4 gap-y-2">
+            {filterGroups.map((g) => (
+              <div key={g.id} className="flex items-center gap-1.5">
+                <span className="text-[11px] uppercase tracking-wide text-[#6B7280]">{g.name}</span>
+                <div className="flex items-center flex-wrap gap-1">
+                  {g.values.map((v) => (
+                    <span
+                      key={v.raw}
+                      className="inline-flex items-center gap-1 bg-[#EFF6FF] border border-[#BFDBFE] rounded-full px-2.5 py-[2px] text-[12px] text-[#1E40AF]"
+                    >
+                      {v.label}
+                      <button
+                        onClick={v.remove}
+                        className="text-[#93C5FD] hover:text-[#1E40AF]"
+                        aria-label={`Remove ${v.label}`}
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <button onClick={clearAllFilters} className="ml-auto text-[12px] text-sgi hover:underline">
+              Clear all
+            </button>
+          </div>
+        )}
 
         {/* ------------------------- stats bar ------------------------- */}
         <div className="mt-3 flex items-center gap-1 flex-wrap">
@@ -532,7 +593,7 @@ export default function Screening() {
               )}
               {isColVisible("hiringManager") && <Th className="min-w-[110px]">Hiring Manager</Th>}
               {isColVisible("recruiter") && <Th className="min-w-[100px]">Recruiter</Th>}
-              <Th className="text-center min-w-[120px]">Actions</Th>
+              <Th className="text-center min-w-[140px]">Actions</Th>
             </tr>
           </thead>
           <tbody>
@@ -672,18 +733,19 @@ export default function Screening() {
 
                   {/* actions */}
                   <Td>
-                    <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex items-center justify-center gap-1.5 text-[12px]">
                       {ADVANCE_TABLE[c.status] && (
                         <>
                           <button
                             onClick={(e) => { e.stopPropagation(); advanceCandidate(c.id); }}
-                            className="h-[26px] px-2.5 rounded-[5px] bg-sgi text-white text-[11px] font-medium hover:bg-sgi-600 transition whitespace-nowrap"
+                            className="text-sgi hover:underline"
                           >
                             {ADVANCE_TABLE[c.status]}
                           </button>
+                          <span className="text-[#d0d0d0]">·</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeclineTarget(c); }}
-                            className="ml-1.5 text-[11px] text-[#DC2626] hover:underline"
+                            className="text-[#DC2626] hover:underline"
                           >
                             Decline
                           </button>
@@ -691,10 +753,11 @@ export default function Screening() {
                       )}
                       {c.status === "Offer" && (
                         <>
-                          <span className="text-[11px] text-[#9aa5b1]">Offer Sent</span>
+                          <span className="text-[#9aa5b1]">Offer Sent</span>
+                          <span className="text-[#d0d0d0]">·</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeclineTarget(c); }}
-                            className="ml-1.5 text-[11px] text-[#DC2626] hover:underline"
+                            className="text-[#DC2626] hover:underline"
                           >
                             Decline
                           </button>
@@ -703,7 +766,7 @@ export default function Screening() {
                       {c.status === "Declined" && (
                         <button
                           onClick={(e) => { e.stopPropagation(); restoreCandidate(c.id); }}
-                          className="h-7 px-2.5 rounded-md bg-[#f2f2f2] text-[#555] border border-[#e2e2e2] text-[11px] font-medium hover:bg-[#e8e8e8] transition"
+                          className="text-sgi hover:underline"
                         >
                           Restore
                         </button>
@@ -711,7 +774,7 @@ export default function Screening() {
                       {c.status === "Knocked Out" && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openRow(c.id); }}
-                          className="text-[11px] text-[#9aa5b1] hover:text-[#6B7280] hover:underline"
+                          className="text-[#9aa5b1] hover:text-[#6B7280] hover:underline"
                         >
                           Review Manually
                         </button>
@@ -860,20 +923,17 @@ export default function Screening() {
         </div>
       </div>
 
-      {/* ---------------------------- drawer ----------------------------- */}
-      <div className={`fixed inset-0 z-40 ${drawerOpen ? "" : "pointer-events-none"}`}>
-        <div
-          onClick={() => setSelectedId(null)}
-          className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${
-            drawerOpen ? "opacity-100" : "opacity-0"
-          }`}
-        />
-        <aside
-          className={`absolute right-0 top-0 h-full w-[460px] bg-white border-l border-[#ececec] shadow-[-8px_0_30px_-12px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-out ${
-            drawerOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
-          {selected && (
+      </div>
+      {/* END LEFT column */}
+
+      {/* RIGHT: inline drawer (table shrinks, no overlay) */}
+      <aside
+        className={`shrink-0 h-full overflow-hidden border-l border-[#ececec] transition-[width] duration-300 ease-out ${
+          drawerOpen ? "w-[420px]" : "w-0 border-l-0"
+        }`}
+      >
+        {selected && (
+          <div className="w-[420px] h-full">
             <Drawer
               key={selected.id}
               c={selected}
@@ -883,9 +943,9 @@ export default function Screening() {
               onResume={() => showToast(`Downloading ${selected.name}'s resume`)}
               onRequestDecline={() => setDeclineTarget(selected)}
             />
-          )}
-        </aside>
-      </div>
+          </div>
+        )}
+      </aside>
 
       {/* focus mode full-screen modal */}
       {focusOpen && sorted.length > 0 && (
@@ -938,25 +998,21 @@ export default function Screening() {
 
 const DRAWER_TABS = [
   { id: "overview", label: "Overview" },
-  { id: "screening", label: "Screening Qs" },
   { id: "notes", label: "Notes" },
-  { id: "feedback", label: "Feedback" },
-  { id: "activity", label: "Activity" },
 ];
 
 function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }) {
   const [tab, setTab] = useState("overview");
   const [notes, setNotes] = useState("");
-  const [rating, setRating] = useState(0);
   const mb = matchBadge(c.match);
   const stage = STAGE[c.status] || STAGE["To Review"];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full bg-white">
       {/* close */}
       <button
         onClick={onClose}
-        className="absolute top-3 right-3 p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]"
+        className="absolute top-3 right-3 z-10 p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]"
         aria-label="Close"
       >
         <X size={16} />
@@ -1020,6 +1076,13 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
       <div className="flex-1 overflow-auto px-5 py-4">
         {tab === "overview" && (
           <div className="space-y-6">
+            {/* ai summary */}
+            <Section title="AI Summary" icon={<Sparkles size={11} />}>
+              <div className="bg-[#fafafa] border-l-2 border-l-sgi rounded-r-md py-3 px-3.5">
+                <p className="text-[13px] text-[#444] leading-relaxed">{c.aiSummary}</p>
+              </div>
+            </Section>
+
             {/* contact */}
             <Section title="Contact">
               <div className="space-y-2">
@@ -1047,28 +1110,8 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
               </Section>
             )}
 
-            {/* screening criteria */}
-            <Section title="Screening Criteria">
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {Object.entries(c.checks).map(([k, v]) => (
-                  <li key={k} className="flex items-center gap-2 text-[12px]">
-                    {v ? (
-                      <Check size={13} className="text-emerald-600 shrink-0" />
-                    ) : (
-                      <X size={13} className="text-red-400 shrink-0" />
-                    )}
-                    <span className={v ? "text-[#333]" : "text-[#aaa]"}>{k}</span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-
-            {/* ai summary */}
-            <Section title="AI Summary" icon={<Sparkles size={11} />}>
-              <div className="bg-[#fafafa] border-l-2 border-l-sgi rounded-r-md py-3 px-3.5">
-                <p className="text-[13px] text-[#444] leading-relaxed">{c.aiSummary}</p>
-              </div>
-            </Section>
+            {/* knockout + screening questions */}
+            <ScreeningQsContent c={c} />
 
             {/* work history */}
             <Section title="Work History">
@@ -1095,41 +1138,16 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
           </div>
         )}
 
-        {tab === "screening" && <ScreeningQsContent c={c} />}
-
         {tab === "notes" && (
           <div>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add a private note about this candidate…"
-              className="w-full min-h-[160px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(24,95,165,0.1)]"
+              className="w-full min-h-[160px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.1)]"
             />
           </div>
         )}
-
-        {tab === "feedback" && (
-          <div className="space-y-5">
-            {c.status === "Screening" && (
-              <div className="border border-[#eee] rounded-md p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[12px] font-medium text-[#1a1a1a]">Recruiter screen</span>
-                  <Stars value={4} />
-                </div>
-                <p className="text-[12px] text-[#6B7280]">Strong communicator, relevant domain experience. Advancing to panel.</p>
-              </div>
-            )}
-            <Section title="Add Feedback">
-              <Stars value={rating} onChange={setRating} interactive />
-              <textarea
-                placeholder="Share feedback…"
-                className="mt-2 w-full min-h-[90px] p-3 border border-[#E2E8F0] rounded-md text-[13px] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(24,95,165,0.1)]"
-              />
-            </Section>
-          </div>
-        )}
-
-        {tab === "activity" && <ActivityList c={c} />}
       </div>
 
       {/* actions */}
@@ -1219,28 +1237,11 @@ function ScreeningQsContent({ c }) {
   );
 }
 
-function ActivityList({ c }) {
-  return (
-    <ol className="relative ml-1.5 space-y-4 before:absolute before:left-[3px] before:top-1.5 before:bottom-1.5 before:w-px before:bg-[#ececec]">
-      {c.activity.map((a, i) => (
-        <li key={i} className="relative pl-5">
-          <span className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-[#bbb]" />
-          <div className="text-[13px] text-[#1a1a1a]">{a.text}</div>
-          <div className="text-[11px] text-[#9aa5b1] mt-0.5">{fmtDate(a.date)}</div>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 /* ========================== focus mode modal =========================== */
 
 const FOCUS_TABS = [
   { id: "overview", label: "Overview" },
-  { id: "screening", label: "Screening Qs" },
   { id: "notes", label: "Notes" },
-  { id: "feedback", label: "Feedback" },
-  { id: "activity", label: "Activity" },
 ];
 
 const UNIS = ["University of Georgia", "Georgia Institute of Technology", "Emory University", "Georgia State University"];
@@ -1250,14 +1251,12 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
   const c = list[index];
   const [tab, setTab] = useState("overview");
   const [notes, setNotes] = useState("");
-  const [rating, setRating] = useState(0);
 
   // reset per-candidate fields when navigating (render-time, no effect)
   const [curId, setCurId] = useState(c?.id);
   if (c && c.id !== curId) {
     setCurId(c.id);
     setNotes("");
-    setRating(0);
   }
 
   const atFirst = index <= 0;
@@ -1288,7 +1287,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[1200px] max-w-full h-[85vh] bg-white rounded-[12px] shadow-[0_20px_60px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden"
+        className="w-[90vw] max-w-[1400px] h-[92vh] bg-white rounded-[12px] shadow-[0_20px_60px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden"
       >
       {/* top bar */}
       <div className="h-14 shrink-0 border-b border-[#f0f0f0] flex items-center px-5">
@@ -1368,6 +1367,12 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
 
                 <div className="border-t border-[#f0f0f0]" />
 
+                <Section title="AI Summary" icon={<Sparkles size={11} />}>
+                  <div className="bg-[#fafafa] border-l-2 border-l-sgi rounded-r-md py-3 px-3.5">
+                    <p className="text-[13px] text-[#444] leading-relaxed">{c.aiSummary}</p>
+                  </div>
+                </Section>
+
                 <Section title="Contact">
                   <div className="space-y-2">
                     <Row icon={<Mail size={13} />}>
@@ -1393,26 +1398,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
                   </Section>
                 )}
 
-                <Section title="Screening Criteria">
-                  <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    {Object.entries(c.checks).map(([k, v]) => (
-                      <li key={k} className="flex items-center gap-2 text-[12px]">
-                        {v ? (
-                          <Check size={13} className="text-emerald-600 shrink-0" />
-                        ) : (
-                          <X size={13} className="text-red-400 shrink-0" />
-                        )}
-                        <span className={v ? "text-[#333]" : "text-[#aaa]"}>{k}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
-
-                <Section title="AI Summary" icon={<Sparkles size={11} />}>
-                  <div className="bg-[#fafafa] border-l-2 border-l-sgi rounded-r-md py-3 px-3.5">
-                    <p className="text-[13px] text-[#444] leading-relaxed">{c.aiSummary}</p>
-                  </div>
-                </Section>
+                <ScreeningQsContent c={c} />
 
                 <Section title="Work History">
                   <ol className="space-y-3">
@@ -1438,28 +1424,14 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
               </div>
             )}
 
-            {tab === "screening" && <ScreeningQsContent c={c} />}
-
             {tab === "notes" && (
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add a private note about this candidate…"
-                className="w-full min-h-[200px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(24,95,165,0.1)]"
+                className="w-full min-h-[200px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.1)]"
               />
             )}
-
-            {tab === "feedback" && (
-              <Section title="Add Feedback">
-                <Stars value={rating} onChange={setRating} interactive />
-                <textarea
-                  placeholder="Share feedback…"
-                  className="mt-2 w-full min-h-[140px] p-3 border border-[#E2E8F0] rounded-md text-[13px] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(24,95,165,0.1)]"
-                />
-              </Section>
-            )}
-
-            {tab === "activity" && <ActivityList c={c} />}
           </div>
 
           {/* bottom fixed actions */}
@@ -1789,26 +1761,6 @@ function Row({ icon, children }) {
   );
 }
 
-function Stars({ value = 0, onChange, interactive = false }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          disabled={!interactive}
-          onClick={() => onChange?.(n)}
-          className={interactive ? "cursor-pointer" : "cursor-default"}
-        >
-          <Star
-            size={15}
-            className={n <= value ? "text-amber-400 fill-amber-400" : "text-[#d4d4d4]"}
-          />
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function IntExtBadge({ internal }) {
   return (
@@ -1898,8 +1850,8 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
         </div>
 
         <div className="px-6 py-6 space-y-5 max-h-[75vh] overflow-y-auto">
-          <div className="flex items-center gap-2 px-3 py-2 bg-[#EAF2FB] border border-[#CFE0F2] rounded-md">
-            <Info size={13} className="text-[#0D2B4E] shrink-0" />
+          <div className="flex items-center gap-2 px-3 py-2 bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+            <Info size={13} className="text-[#2563EB] shrink-0" />
             <span className="text-[12px] text-[#1a1a1a]">
               You've selected {count} application{count === 1 ? "" : "s"}.
             </span>
@@ -1915,13 +1867,13 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
                     name="decline-action"
                     checked={action === opt.id}
                     onChange={() => setAction(opt.id)}
-                    className="w-3.5 h-3.5 accent-[#0D2B4E]"
+                    className="w-3.5 h-3.5 accent-[#2563EB]"
                   />
                   {opt.label}
                 </label>
               ))}
             </div>
-            <p className="mt-2 text-[12px] text-[#0D2B4E]">
+            <p className="mt-2 text-[12px] text-[#2563EB]">
               Application status will be marked as '{selectedAction.status}'.
             </p>
           </div>
@@ -1931,7 +1883,7 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
           <button onClick={onCancel} className="h-9 px-4 inline-flex items-center bg-white border border-[#E2E8F0] text-[#4A5568] rounded-md text-[13px] font-medium hover:bg-[#F7FAFC]">
             Cancel
           </button>
-          <button onClick={onConfirm} className="h-9 px-4 inline-flex items-center bg-[#0D2B4E] text-white rounded-md text-[13px] font-medium hover:bg-[#0A2240]">
+          <button onClick={onConfirm} className="h-9 px-4 inline-flex items-center bg-[#2563EB] text-white rounded-md text-[13px] font-medium hover:bg-[#1D4ED8]">
             Decline Application{count === 1 ? "" : "s"}
           </button>
         </div>
