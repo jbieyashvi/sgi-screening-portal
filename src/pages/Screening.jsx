@@ -151,7 +151,6 @@ export default function Screening() {
   const [reqFilter, setReqFilter] = useState("REQ-2715");
   const [query, setQuery] = useState("");
   const [aiQuery, setAiQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("To Review");
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDecline, setBulkDecline] = useState(false);
@@ -205,7 +204,6 @@ export default function Screening() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return reqCandidates.filter((c) => {
-      if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (srcF.size && !srcF.has(c.appliedVia)) return false;
       if (locF.size && !locF.has(c.location)) return false;
       if (stageF.size && !stageF.has(c.status)) return false;
@@ -217,7 +215,7 @@ export default function Screening() {
       }
       return true;
     });
-  }, [reqCandidates, statusFilter, query, srcF, locF, stageF, matchF, salaryF]);
+  }, [reqCandidates, query, srcF, locF, stageF, matchF, salaryF]);
 
   // filter dropdown option lists
   const sourceOpts = SOURCE_FILTER_OPTS;
@@ -245,7 +243,7 @@ export default function Screening() {
 
   // reset to page 1 whenever the filter/result set changes (render-time adjust)
   const totalPages = Math.max(1, Math.ceil(sorted.length / rpp));
-  const filterKey = `${reqFilter}|${query}|${statusFilter}|${rpp}|${[...srcF].sort()}|${[...locF].sort()}|${[...stageF].sort()}|${[...matchF].sort()}|${[...salaryF].sort()}`;
+  const filterKey = `${reqFilter}|${query}|${rpp}|${[...srcF].sort()}|${[...locF].sort()}|${[...stageF].sort()}|${[...matchF].sort()}|${[...salaryF].sort()}`;
   const [prevKey, setPrevKey] = useState(filterKey);
   if (filterKey !== prevKey) {
     setPrevKey(filterKey);
@@ -276,7 +274,7 @@ export default function Screening() {
     return m;
   }, [candidates]);
   const colSpanCount =
-    1 + 1 + COLUMNS.filter((c) => isColVisible(c.key)).length + 1; // checkbox + name + visible + actions
+    1 + 1 + (reqFilter === "all" ? 1 : 0) + COLUMNS.filter((c) => isColVisible(c.key)).length + 1; // checkbox + name + req? + visible + actions
 
   return (
     <div className="flex flex-col h-screen bg-white">
@@ -409,22 +407,13 @@ export default function Screening() {
 
         {/* ------------------------- stats bar ------------------------- */}
         <div className="mt-3 flex items-center gap-1 flex-wrap">
-          {STAT_CARDS.map((s, i) => {
-            const on = statusFilter === s.key;
-            return (
-              <button
-                key={s.key}
-                onClick={() => setStatusFilter(s.key)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[13px] transition ${
-                  on ? "bg-[#E8F0FE]" : "hover:bg-[#fafafa]"
-                }`}
-              >
-                <span className={on ? "text-sgi font-medium" : "text-[#6B7280]"}>{s.label}:</span>
-                <span className={`font-bold tabular-nums ${on ? "text-sgi" : s.color}`}>{counts[s.key]}</span>
-                {i < STAT_CARDS.length - 1 && <span className="ml-1 text-[#e2e2e2]">|</span>}
-              </button>
-            );
-          })}
+          {STAT_CARDS.map((s, i) => (
+            <div key={s.key} className="flex items-center gap-1.5 px-3 py-1 text-[13px]">
+              <span className="text-[#6B7280]">{s.label}:</span>
+              <span className={`font-bold tabular-nums ${s.color}`}>{counts[s.key]}</span>
+              {i < STAT_CARDS.length - 1 && <span className="ml-1 text-[#e2e2e2]">|</span>}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -437,6 +426,7 @@ export default function Screening() {
                 <SelectAll ids={pageRows.map((c) => c.id)} selectedIds={selectedIds} setSelectedIds={setSelectedIds} />
               </Th>
               <Th>Name</Th>
+              {reqFilter === "all" && <Th>Requisition</Th>}
               {isColVisible("contact") && <Th>Contact</Th>}
               {isColVisible("source") && (
                 <Th>
@@ -554,6 +544,16 @@ export default function Screening() {
                     </div>
                     <div className="text-[11px] text-[#9aa5b1] mt-0.5">{c.title}</div>
                   </Td>
+
+                  {/* requisition (only in All Job Openings view) */}
+                  {reqFilter === "all" && (
+                    <Td>
+                      <div className="text-[12px] font-medium text-sgi">{c.reqId}</div>
+                      <div className="text-[11px] text-[#9aa5b1] truncate max-w-[170px]">
+                        {requisitions.find((r) => r.id === c.reqId)?.title || "—"}
+                      </div>
+                    </Td>
+                  )}
 
                   {/* contact */}
                   {isColVisible("contact") && (
@@ -1467,7 +1467,18 @@ function FilterHead({ label, children }) {
 function ColumnFilter({ id, openFilter, setOpenFilter, options, applied, onApply, showBadge = false }) {
   const ref = useRef(null);
   const open = openFilter === id;
+  const [alignRight, setAlignRight] = useState(false);
   const [draft, setDraft] = useState(() => new Set(applied));
+
+  // on open: right-align if the icon sits in the right half of the viewport
+  const toggleOpen = (e) => {
+    e.stopPropagation();
+    if (!open && ref.current) {
+      const r = ref.current.getBoundingClientRect();
+      setAlignRight(r.left > window.innerWidth / 2);
+    }
+    setOpenFilter(open ? null : id);
+  };
 
   // sync draft from applied each time the popup opens (render-time, no effect)
   const [prevOpen, setPrevOpen] = useState(open);
@@ -1500,7 +1511,7 @@ function ColumnFilter({ id, openFilter, setOpenFilter, options, applied, onApply
     <span className="relative inline-flex" ref={ref}>
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpenFilter(open ? null : id); }}
+        onClick={toggleOpen}
         title="Filter"
         className={`p-0.5 rounded transition ${
           active ? "text-sgi" : "text-[#b0b8c1] hover:text-[#6B7280]"
@@ -1512,7 +1523,7 @@ function ColumnFilter({ id, openFilter, setOpenFilter, options, applied, onApply
       {open && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute left-0 top-full mt-1 z-40 w-[220px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.1)] p-3 normal-case tracking-normal"
+          className={`absolute ${alignRight ? "right-0" : "left-0"} top-full mt-1 z-50 w-[220px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.1)] p-3 normal-case tracking-normal`}
         >
           {options.length > 0 && (
             <>
