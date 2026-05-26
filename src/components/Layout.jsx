@@ -36,11 +36,11 @@ export default function Layout() {
         >
           {!collapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-6 h-6 rounded bg-[#185FA5] text-white grid place-items-center font-semibold text-[10px] shrink-0">
+              <div className="w-6 h-6 rounded bg-[#0D2B4E] text-white grid place-items-center font-semibold text-[10px] shrink-0">
                 SGI
               </div>
               <div className="leading-tight min-w-0">
-                <div className="text-[13px] font-semibold text-[#185FA5] truncate">
+                <div className="text-[13px] font-semibold text-[#0D2B4E] truncate">
                   Safe-Guard
                 </div>
                 <div className="text-[10px] text-[#6B90C4] truncate">
@@ -51,7 +51,7 @@ export default function Layout() {
           )}
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className="p-1 rounded text-[#6B7280] hover:bg-[#EEF2FF] hover:text-[#185FA5] transition"
+            className="p-1 rounded text-[#6B7280] hover:bg-[#EEF2FF] hover:text-[#0D2B4E] transition"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand" : "Collapse"}
           >
@@ -71,7 +71,7 @@ export default function Layout() {
                   collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
                 } py-1.5 rounded text-[13px] transition ${
                   isActive
-                    ? "bg-[#E8F0FE] text-[#185FA5] font-semibold"
+                    ? "bg-[#E8F0FE] text-[#0D2B4E] font-semibold"
                     : "text-[#4A5568] hover:bg-[#EEF2FF]"
                 }`
               }
@@ -79,12 +79,12 @@ export default function Layout() {
               {({ isActive }) => (
                 <>
                   {isActive && !collapsed && (
-                    <span className="absolute left-0 top-1 bottom-1 w-[2px] bg-[#185FA5] rounded-r" />
+                    <span className="absolute left-0 top-1 bottom-1 w-[2px] bg-[#0D2B4E] rounded-r" />
                   )}
                   <Icon
                     size={15}
                     className={`shrink-0 ${
-                      isActive ? "text-[#185FA5]" : "text-[#6B7280]"
+                      isActive ? "text-[#0D2B4E]" : "text-[#6B7280]"
                     }`}
                   />
                   {!collapsed && <span className="truncate">{label}</span>}
@@ -99,7 +99,7 @@ export default function Layout() {
             collapsed ? "justify-center p-2" : "gap-2.5 p-3"
           }`}
         >
-          <div className="w-7 h-7 rounded-full bg-[#185FA5] text-white grid place-items-center font-semibold text-[10px] shrink-0">
+          <div className="w-7 h-7 rounded-full bg-[#0D2B4E] text-white grid place-items-center font-semibold text-[10px] shrink-0">
             CW
           </div>
           {!collapsed && (

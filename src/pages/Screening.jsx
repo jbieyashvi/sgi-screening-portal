@@ -1731,7 +1731,7 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
 
         <div className="px-6 py-6 space-y-5 max-h-[75vh] overflow-y-auto">
           <div className="flex items-center gap-2 px-3 py-2 bg-[#EAF2FB] border border-[#CFE0F2] rounded-md">
-            <Info size={13} className="text-[#185FA5] shrink-0" />
+            <Info size={13} className="text-[#0D2B4E] shrink-0" />
             <span className="text-[12px] text-[#1a1a1a]">
               You've selected {count} application{count === 1 ? "" : "s"}.
             </span>
@@ -1747,13 +1747,13 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
                     name="decline-action"
                     checked={action === opt.id}
                     onChange={() => setAction(opt.id)}
-                    className="w-3.5 h-3.5 accent-[#185FA5]"
+                    className="w-3.5 h-3.5 accent-[#0D2B4E]"
                   />
                   {opt.label}
                 </label>
               ))}
             </div>
-            <p className="mt-2 text-[12px] text-[#185FA5]">
+            <p className="mt-2 text-[12px] text-[#0D2B4E]">
               Application status will be marked as '{selectedAction.status}'.
             </p>
           </div>
@@ -1763,7 +1763,7 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
           <button onClick={onCancel} className="h-9 px-4 inline-flex items-center bg-white border border-[#E2E8F0] text-[#4A5568] rounded-md text-[13px] font-medium hover:bg-[#F7FAFC]">
             Cancel
           </button>
-          <button onClick={onConfirm} className="h-9 px-4 inline-flex items-center bg-[#185FA5] text-white rounded-md text-[13px] font-medium hover:bg-[#134C84]">
+          <button onClick={onConfirm} className="h-9 px-4 inline-flex items-center bg-[#0D2B4E] text-white rounded-md text-[13px] font-medium hover:bg-[#0A2240]">
             Decline Application{count === 1 ? "" : "s"}
           </button>
         </div>
