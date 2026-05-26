@@ -94,7 +94,7 @@ const genSalary = (years, match, seed) => {
   const base =
     92000 + (years || 4) * 6500 + Math.round((match || 70) / 10) * 1500 + (seed % 5) * 2000;
   const rounded = Math.round(base / 1000) * 1000;
-  return `$${rounded.toLocaleString()}`;
+  return `$${rounded.toLocaleString('en-US')}`;
 };
 
 // candidates can apply to multiple locations (ADP API). Build a deterministic
@@ -120,6 +120,41 @@ const buildLocs = (base, seed) => {
   return out;
 };
 
+// SGI knockout questions (auto-reject) + screening questions (informational).
+// Answers derived from candidate fields so knocked-out / sponsorship candidates fail.
+const buildKnockoutQuestions = (o) => {
+  const gaLocal = /,\s*GA$/.test(o.location || "");
+  const sponsor = o.sponsorship ?? false;
+  const onsite = o.hybridOK ?? true;
+  return [
+    { question: "Are you 18 years of age or older?", required: "Yes", answer: "Yes" },
+    { question: "Are you authorized to work in the United States?", required: "Yes", answer: "Yes" },
+    { question: "Do you require visa sponsorship?", required: "No", answer: sponsor ? "Yes" : "No" },
+    { question: "Are you currently located in Metro Atlanta, GA?", required: "Yes", answer: gaLocal ? "Yes" : "No" },
+    { question: "Are you able to work on-site 4 days per week?", required: "Yes", answer: onsite ? "Yes" : "No" },
+  ].map((k) => ({ ...k, passed: k.answer === k.required }));
+};
+
+const buildScreeningQuestions = (o, seed) => {
+  const yrs = o.years || 4;
+  const auto = Math.max(1, yrs - (seed % 3));
+  const fni = Math.max(0, yrs - 3 - (seed % 2));
+  const base = 92000 + yrs * 6500 + Math.round((o.match || 70) / 10) * 1500 + (seed % 5) * 2000;
+  const lo = Math.round((base - 8000) / 1000) * 1000;
+  const hi = Math.round((base + 12000) / 1000) * 1000;
+  const gaLocal = /,\s*GA$/.test(o.location || "");
+  return [
+    { question: "How many years of automotive retail experience do you have?", answer: `${auto} year${auto === 1 ? "" : "s"}` },
+    { question: "How many years of F&I experience do you have?", answer: `${fni} year${fni === 1 ? "" : "s"}` },
+    { question: "What is your desired compensation range?", answer: `$${lo.toLocaleString('en-US')} - $${hi.toLocaleString('en-US')}` },
+    { question: "Are you open to relocation?", answer: gaLocal ? "No, already in Atlanta area" : "Yes" },
+  ];
+};
+
+// weighted so the common names (from ADP / the video) appear most often
+const HIRING_MANAGERS = ["Jeri Hunnell", "Jeri Hunnell", "Jeri Hunnell", "Marcus Johnson", "Sarah Williams", "David Chen"];
+const RECRUITERS = ["Spencer Strobel", "Spencer Strobel", "Spencer Strobel", "John Marie", "Candace W."];
+
 // Helper: build a candidate with sensible defaults
 const make = (o) => {
   const seed = hashStr(o.id || o.name || "x");
@@ -136,6 +171,10 @@ const make = (o) => {
   aiReviewed: true,
   internal: INTERNAL_IDS.has(o.id),
   appliedLocations: buildLocs(o.location, seed),
+  knockoutQuestions: buildKnockoutQuestions(o),
+  screeningQuestions: buildScreeningQuestions(o, seed),
+  hiringManager: HIRING_MANAGERS[seed % HIRING_MANAGERS.length],
+  recruiter: RECRUITERS[seed % RECRUITERS.length],
   ...o,
   activity: o.activity || [
     { date: o.applied, text: "Applied via ADP" },

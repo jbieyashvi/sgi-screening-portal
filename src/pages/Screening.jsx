@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Search,
   Filter,
+  Zap,
   Download,
   Mail,
   Phone,
@@ -123,7 +124,9 @@ const fmtDate = (iso) => {
 
 /* ------------------------------- columns ---------------------------------- */
 
+// toggleable data columns (between locked Name and locked Actions), in render order
 const COLUMNS = [
+  { key: "requisition", label: "Requisition" },
   { key: "contact", label: "Contact" },
   { key: "source", label: "Applied Via" },
   { key: "location", label: "Location" },
@@ -131,6 +134,27 @@ const COLUMNS = [
   { key: "salary", label: "Desired Salary" },
   { key: "match", label: "Match Score" },
   { key: "stage", label: "Stage" },
+  { key: "hiringManager", label: "Hiring Manager" },
+  { key: "recruiter", label: "Recruiter" },
+];
+
+// hidden by default
+const DEFAULT_HIDDEN = ["requisition", "hiringManager", "recruiter"];
+
+// Columns dropdown order (Name + Actions are locked, always visible)
+const COLUMN_TOGGLES = [
+  { key: "name", label: "Name", locked: true },
+  { key: "contact", label: "Contact" },
+  { key: "source", label: "Applied Via" },
+  { key: "location", label: "Location" },
+  { key: "applied", label: "Applied Date" },
+  { key: "salary", label: "Desired Salary" },
+  { key: "match", label: "Match Score" },
+  { key: "stage", label: "Stage" },
+  { key: "actions", label: "Actions", locked: true },
+  { key: "hiringManager", label: "Hiring Manager" },
+  { key: "recruiter", label: "Recruiter" },
+  { key: "requisition", label: "Requisition" },
 ];
 
 const STAT_CARDS = [
@@ -168,7 +192,7 @@ export default function Screening() {
   const [salaryF, setSalaryF] = useState(() => new Set());
   const [openFilter, setOpenFilter] = useState(null); // "source" | "location" | "stage" | "match" | "salary" | null
 
-  const [hiddenCols, setHiddenCols] = useState(() => new Set());
+  const [hiddenCols, setHiddenCols] = useState(() => new Set(DEFAULT_HIDDEN));
   const [colsOpen, setColsOpen] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
   const [rpp, setRpp] = useState(10);
@@ -274,7 +298,7 @@ export default function Screening() {
     return m;
   }, [candidates]);
   const colSpanCount =
-    1 + 1 + (reqFilter === "all" ? 1 : 0) + COLUMNS.filter((c) => isColVisible(c.key)).length + 1; // checkbox + name + req? + visible + actions
+    1 + 1 + COLUMNS.filter((c) => isColVisible(c.key)).length + 1; // checkbox + name + visible data cols + actions
 
   return (
     <div className="flex flex-col h-screen bg-white">
@@ -349,14 +373,17 @@ export default function Screening() {
             </button>
             {colsOpen && (
               <div className="absolute right-0 top-full mt-1 z-30 w-52 bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] p-1.5">
-                {COLUMNS.map((col) => (
+                {COLUMN_TOGGLES.map((col) => (
                   <label
                     key={col.key}
-                    className="flex items-center gap-2.5 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] hover:bg-[#fafafa] cursor-pointer"
+                    className={`flex items-center gap-2.5 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] ${
+                      col.locked ? "opacity-60 cursor-not-allowed" : "hover:bg-[#fafafa] cursor-pointer"
+                    }`}
                   >
                     <input
                       type="checkbox"
-                      checked={!hiddenCols.has(col.key)}
+                      checked={col.locked ? true : !hiddenCols.has(col.key)}
+                      disabled={col.locked}
                       onChange={() =>
                         setHiddenCols((prev) => {
                           const next = new Set(prev);
@@ -367,6 +394,7 @@ export default function Screening() {
                       className="minicheck"
                     />
                     {col.label}
+                    {col.locked && <span className="ml-auto text-[10px] text-[#bbb]">locked</span>}
                   </label>
                 ))}
               </div>
@@ -426,10 +454,10 @@ export default function Screening() {
                 <SelectAll ids={pageRows.map((c) => c.id)} selectedIds={selectedIds} setSelectedIds={setSelectedIds} />
               </Th>
               <Th>Name</Th>
-              {reqFilter === "all" && <Th>Requisition</Th>}
+              {isColVisible("requisition") && <Th>Requisition</Th>}
               {isColVisible("contact") && <Th>Contact</Th>}
               {isColVisible("source") && (
-                <Th>
+                <Th className="min-w-[90px]">
                   <FilterHead label="Applied Via">
                     <ColumnFilter
                       id="source"
@@ -444,7 +472,7 @@ export default function Screening() {
                 </Th>
               )}
               {isColVisible("location") && (
-                <Th>
+                <Th className="min-w-[100px]">
                   <FilterHead label="Location">
                     <ColumnFilter
                       id="location"
@@ -457,9 +485,9 @@ export default function Screening() {
                   </FilterHead>
                 </Th>
               )}
-              {isColVisible("applied") && <Th>Applied</Th>}
+              {isColVisible("applied") && <Th className="min-w-[90px]">Applied</Th>}
               {isColVisible("salary") && (
-                <Th>
+                <Th className="min-w-[110px]">
                   <FilterHead label="Desired Salary">
                     <ColumnFilter
                       id="salary"
@@ -473,7 +501,7 @@ export default function Screening() {
                 </Th>
               )}
               {isColVisible("match") && (
-                <Th>
+                <Th className="min-w-[70px]">
                   <FilterHead label="Match">
                     <ColumnFilter
                       id="match"
@@ -488,7 +516,7 @@ export default function Screening() {
                 </Th>
               )}
               {isColVisible("stage") && (
-                <Th>
+                <Th className="min-w-[90px]">
                   <FilterHead label="Stage">
                     <ColumnFilter
                       id="stage"
@@ -502,7 +530,9 @@ export default function Screening() {
                   </FilterHead>
                 </Th>
               )}
-              <Th className="text-center">Actions</Th>
+              {isColVisible("hiringManager") && <Th className="min-w-[110px]">Hiring Manager</Th>}
+              {isColVisible("recruiter") && <Th className="min-w-[100px]">Recruiter</Th>}
+              <Th className="text-center min-w-[120px]">Actions</Th>
             </tr>
           </thead>
           <tbody>
@@ -535,19 +565,19 @@ export default function Screening() {
                   {/* name */}
                   <Td>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-[13px] text-[#1a1a1a]">{c.name}</span>
+                      <span className="font-medium text-[13px] text-[#1a1a1a] truncate max-w-[160px]">{c.name}</span>
                       <IntExtBadge internal={c.internal} />
                       {c.aiReviewed && (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold tracking-wide bg-sgi-50 text-sgi border border-sgi-100 px-1 py-0.5 rounded">
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold tracking-wide bg-sgi-50 text-sgi border border-sgi-100 px-1 py-0.5 rounded shrink-0">
                           <Sparkles size={8} /> AI
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-[#9aa5b1] mt-0.5">{c.title}</div>
+                    <div className="text-[11px] text-[#9aa5b1] mt-0.5 truncate max-w-[160px]">{c.title}</div>
                   </Td>
 
-                  {/* requisition (only in All Job Openings view) */}
-                  {reqFilter === "all" && (
+                  {/* requisition */}
+                  {isColVisible("requisition") && (
                     <Td>
                       <div className="text-[12px] font-medium text-sgi">{c.reqId}</div>
                       <div className="text-[11px] text-[#9aa5b1] truncate max-w-[170px]">
@@ -628,6 +658,16 @@ export default function Screening() {
                         {stage.label}
                       </span>
                     </Td>
+                  )}
+
+                  {/* hiring manager */}
+                  {isColVisible("hiringManager") && (
+                    <Td className="text-[12px] text-[#4A5568] whitespace-nowrap">{c.hiringManager}</Td>
+                  )}
+
+                  {/* recruiter */}
+                  {isColVisible("recruiter") && (
+                    <Td className="text-[12px] text-[#4A5568] whitespace-nowrap">{c.recruiter}</Td>
                   )}
 
                   {/* actions */}
@@ -714,6 +754,16 @@ export default function Screening() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <button
+              onClick={() =>
+                showToast(
+                  `Downloading ${selectedIds.size} resumes... Resumes will be saved to your downloads folder`
+                )
+              }
+              className="flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-white border border-[#E2E8F0] text-[#4A5568] text-[13px] font-medium hover:bg-[#F7FAFC] transition"
+            >
+              <Download size={14} /> Download Resumes
+            </button>
             <div className="relative" ref={bulkAdvRef}>
               <button
                 onClick={() => setBulkAdvOpen((o) => !o)}
@@ -819,7 +869,7 @@ export default function Screening() {
           }`}
         />
         <aside
-          className={`absolute right-0 top-0 h-full w-[380px] bg-white border-l border-[#ececec] shadow-[-8px_0_30px_-12px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-out ${
+          className={`absolute right-0 top-0 h-full w-[460px] bg-white border-l border-[#ececec] shadow-[-8px_0_30px_-12px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-out ${
             drawerOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -888,6 +938,7 @@ export default function Screening() {
 
 const DRAWER_TABS = [
   { id: "overview", label: "Overview" },
+  { id: "screening", label: "Screening Qs" },
   { id: "notes", label: "Notes" },
   { id: "feedback", label: "Feedback" },
   { id: "activity", label: "Activity" },
@@ -1044,6 +1095,8 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
           </div>
         )}
 
+        {tab === "screening" && <ScreeningQsContent c={c} />}
+
         {tab === "notes" && (
           <div>
             <textarea
@@ -1076,17 +1129,7 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
           </div>
         )}
 
-        {tab === "activity" && (
-          <ol className="relative ml-1.5 space-y-4 before:absolute before:left-[3px] before:top-1.5 before:bottom-1.5 before:w-px before:bg-[#ececec]">
-            {c.activity.map((a, i) => (
-              <li key={i} className="relative pl-5">
-                <span className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-[#bbb]" />
-                <div className="text-[13px] text-[#1a1a1a]">{a.text}</div>
-                <div className="text-[11px] text-[#9aa5b1] mt-0.5">{fmtDate(a.date)}</div>
-              </li>
-            ))}
-          </ol>
-        )}
+        {tab === "activity" && <ActivityList c={c} />}
       </div>
 
       {/* actions */}
@@ -1126,12 +1169,78 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
   );
 }
 
+function ScreeningQsContent({ c }) {
+  return (
+    <div className="space-y-6">
+      {/* knockout questions */}
+      <section>
+        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-red-600 font-semibold mb-2.5">
+          <Zap size={12} className="text-red-500" />
+          Knockout Questions
+        </div>
+        <div className="space-y-2">
+          {(c.knockoutQuestions || []).map((k, i) => (
+            <div
+              key={i}
+              className={`flex items-center justify-between gap-3 border rounded-md px-3 py-2 ${
+                k.passed ? "border-[#DCFCE7] bg-[#F0FDF4]" : "border-[#FECACA] bg-[#FEF2F2]"
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="text-[11px] text-[#6B7280] truncate" title={k.question}>{k.question}</div>
+                <div className="text-[13px] font-bold text-[#1a1a1a] truncate">{k.answer}</div>
+              </div>
+              {k.passed ? (
+                <Check size={16} className="text-emerald-600 shrink-0" />
+              ) : (
+                <X size={16} className="text-red-600 shrink-0" />
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* screening questions */}
+      <section>
+        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-sgi font-semibold mb-2.5">
+          <Info size={12} className="text-sgi" />
+          Screening Questions
+        </div>
+        <div className="space-y-2">
+          {(c.screeningQuestions || []).map((s, i) => (
+            <div key={i} className="border border-[#eee] rounded-md px-3 py-2 bg-[#F9FAFB]">
+              <div className="text-[11px] text-[#6B7280] truncate" title={s.question}>{s.question}</div>
+              <div className="text-[13px] font-bold text-[#1a1a1a] truncate">{s.answer}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ActivityList({ c }) {
+  return (
+    <ol className="relative ml-1.5 space-y-4 before:absolute before:left-[3px] before:top-1.5 before:bottom-1.5 before:w-px before:bg-[#ececec]">
+      {c.activity.map((a, i) => (
+        <li key={i} className="relative pl-5">
+          <span className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-[#bbb]" />
+          <div className="text-[13px] text-[#1a1a1a]">{a.text}</div>
+          <div className="text-[11px] text-[#9aa5b1] mt-0.5">{fmtDate(a.date)}</div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /* ========================== focus mode modal =========================== */
 
 const FOCUS_TABS = [
   { id: "overview", label: "Overview" },
+  { id: "screening", label: "Screening Qs" },
   { id: "notes", label: "Notes" },
   { id: "feedback", label: "Feedback" },
+  { id: "activity", label: "Activity" },
 ];
 
 const UNIS = ["University of Georgia", "Georgia Institute of Technology", "Emory University", "Georgia State University"];
@@ -1179,7 +1288,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[1100px] max-w-full h-[85vh] bg-white rounded-[12px] shadow-[0_20px_60px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden"
+        className="w-[1200px] max-w-full h-[85vh] bg-white rounded-[12px] shadow-[0_20px_60px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden"
       >
       {/* top bar */}
       <div className="h-14 shrink-0 border-b border-[#f0f0f0] flex items-center px-5">
@@ -1228,14 +1337,14 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
       {/* two columns */}
       <div className="flex-1 flex min-h-0">
         {/* LEFT PANEL */}
-        <div className="w-[380px] shrink-0 border-r border-[#f0f0f0] flex flex-col min-h-0">
+        <div className="w-[420px] shrink-0 border-r border-[#f0f0f0] flex flex-col min-h-0">
           {/* tabs */}
-          <div className="px-5 border-b border-[#f0f0f0] flex gap-1 shrink-0">
+          <div className="px-5 border-b border-[#f0f0f0] flex flex-nowrap gap-1 shrink-0">
             {FOCUS_TABS.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`text-[12px] font-medium px-2.5 py-2.5 border-b-2 -mb-px transition ${
+                className={`shrink-0 whitespace-nowrap text-[12px] font-medium px-3 py-2.5 border-b-2 -mb-px transition ${
                   tab === t.id ? "border-sgi text-[#1a1a1a]" : "border-transparent text-[#888] hover:text-[#1a1a1a]"
                 }`}
               >
@@ -1329,6 +1438,8 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
               </div>
             )}
 
+            {tab === "screening" && <ScreeningQsContent c={c} />}
+
             {tab === "notes" && (
               <textarea
                 value={notes}
@@ -1347,6 +1458,8 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
                 />
               </Section>
             )}
+
+            {tab === "activity" && <ActivityList c={c} />}
           </div>
 
           {/* bottom fixed actions */}
@@ -1488,11 +1601,11 @@ function getPages(current, total) {
 }
 
 function Th({ children, className = "" }) {
-  return <th className={`px-3 py-2 font-semibold ${className}`}>{children}</th>;
+  return <th className={`whitespace-nowrap px-2.5 py-2 font-semibold ${className}`}>{children}</th>;
 }
 
 function Td({ children, className = "" }) {
-  return <td className={`px-3 py-2.5 align-middle ${className}`}>{children}</td>;
+  return <td className={`px-3 py-2.5 align-middle whitespace-nowrap ${className}`}>{children}</td>;
 }
 
 function FilterHead({ label, children }) {

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
+import { Check } from "lucide-react";
 import { candidates as seedCandidates, requisitions } from "./data/mockData";
 
 const AppCtx = createContext(null);
@@ -15,34 +16,44 @@ export function AppProvider({ children }) {
   const [activeReq, setActiveReq] = useState("REQ-2715");
   const [toasts, setToasts] = useState([]);
 
+  // always-current snapshot so action handlers can read a candidate synchronously
+  const candidatesRef = useRef(candidates);
+  useEffect(() => {
+    candidatesRef.current = candidates;
+  }, [candidates]);
+
   const showToast = useCallback((message, type = "success") => {
     const id = Math.random().toString(36).slice(2);
-    setToasts((t) => [...t, { id, message, type }]);
+    setToasts((t) => [...t, { id, message, type, leaving: false }]);
+    // mark leaving (fade out) after 2s, remove after the exit animation
+    setTimeout(() => {
+      setToasts((t) => t.map((x) => (x.id === id ? { ...x, leaving: true } : x)));
+    }, 2000);
     setTimeout(() => {
       setToasts((t) => t.filter((x) => x.id !== id));
-    }, 3200);
+    }, 2250);
   }, []);
 
   const advanceCandidate = useCallback(
     (id) => {
-      let toast = null;
+      const c = candidatesRef.current.find((x) => x.id === id);
+      const step = c && STAGE_FLOW[c.status];
+      if (!c || !step) return;
       setCandidates((cs) =>
-        cs.map((c) => {
-          if (c.id !== id) return c;
-          const step = STAGE_FLOW[c.status];
-          if (!step) return c;
-          toast = step.toast;
-          return {
-            ...c,
-            status: step.next,
-            activity: [
-              ...c.activity,
-              { date: new Date().toISOString().slice(0, 10), text: `Advanced to ${step.next} by recruiter` },
-            ],
-          };
-        })
+        cs.map((x) =>
+          x.id === id
+            ? {
+                ...x,
+                status: step.next,
+                activity: [
+                  ...x.activity,
+                  { date: new Date().toISOString().slice(0, 10), text: `Advanced to ${step.next} by recruiter` },
+                ],
+              }
+            : x
+        )
       );
-      if (toast) showToast(toast);
+      showToast(`${c.name} moved to ${step.next}`);
     },
     [showToast]
   );
@@ -80,7 +91,8 @@ export function AppProvider({ children }) {
             : c
         )
       );
-      showToast("Candidate restored to To Review");
+      const c = candidatesRef.current.find((x) => x.id === id);
+      showToast(`${c ? c.name : "Candidate"} restored to To Review`);
     },
     [showToast]
   );
@@ -101,7 +113,7 @@ export function AppProvider({ children }) {
             : c
         )
       );
-      showToast("Application declined successfully");
+      showToast("Application declined successfully", "error");
     },
     [showToast]
   );
@@ -135,19 +147,16 @@ export function useApp() {
 
 function ToastStack({ toasts }) {
   return (
-    <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-2">
+    <div className="fixed top-6 right-6 z-[99999] flex flex-col gap-2.5">
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`px-4 py-3 rounded-lg shadow-lg border text-sm font-medium ${
-            t.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : t.type === "error"
-              ? "bg-red-50 border-red-200 text-red-800"
-              : "bg-sgi-50 border-sgi-200 text-sgi-700"
+          className={`${t.leaving ? "toast-out" : "toast-in"} flex items-center gap-2 min-w-[200px] max-w-[300px] px-3.5 py-2 rounded-md text-white text-[13px] font-medium shadow-[0_4px_12px_rgba(0,0,0,0.2)] ${
+            t.type === "error" ? "bg-[#DC2626]" : "bg-[#185FA5]"
           }`}
         >
-          {t.message}
+          <Check size={14} className="shrink-0" />
+          <span>{t.message}</span>
         </div>
       ))}
     </div>
