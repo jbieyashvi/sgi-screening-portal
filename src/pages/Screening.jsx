@@ -536,6 +536,7 @@ export default function Screening() {
                   <Td>
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-[13px] text-[#1a1a1a]">{c.name}</span>
+                      <IntExtBadge internal={c.internal} />
                       {c.aiReviewed && (
                         <span className="inline-flex items-center gap-0.5 text-[9px] font-bold tracking-wide bg-sgi-50 text-sgi border border-sgi-100 px-1 py-0.5 rounded">
                           <Sparkles size={8} /> AI
@@ -586,7 +587,17 @@ export default function Screening() {
 
                   {/* location */}
                   {isColVisible("location") && (
-                    <Td className="text-[12px] text-[#4A5568] whitespace-nowrap">{c.location}</Td>
+                    <Td className="text-[12px] text-[#4A5568] whitespace-nowrap">
+                      {(c.appliedLocations && c.appliedLocations[0]) || c.location}
+                      {c.appliedLocations && c.appliedLocations.length > 1 && (
+                        <span
+                          title={c.appliedLocations.join(", ")}
+                          className="ml-1 text-[11px] font-medium text-sgi cursor-help"
+                        >
+                          +{c.appliedLocations.length - 1} more
+                        </span>
+                      )}
+                    </Td>
                   )}
 
                   {/* applied date */}
@@ -924,6 +935,7 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
           {c.title} · {c.years} yrs experience
         </div>
         <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <IntExtBadge internal={c.internal} />
           <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border ${stage.cls}`}>
             {stage.label}
           </span>
@@ -969,6 +981,20 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
                 <Row icon={<MapPin size={13} />}>{c.location}</Row>
               </div>
             </Section>
+
+            {/* applied locations */}
+            {c.appliedLocations && c.appliedLocations.length > 0 && (
+              <Section title="Applied Locations">
+                <ul className="space-y-1.5">
+                  {c.appliedLocations.map((loc) => (
+                    <li key={loc} className="flex items-center gap-2 text-[13px] text-[#4A5568]">
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e0] shrink-0" />
+                      {loc}
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
 
             {/* screening criteria */}
             <Section title="Screening Criteria">
@@ -1159,6 +1185,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
       <div className="h-14 shrink-0 border-b border-[#f0f0f0] flex items-center px-5">
         <div className="flex-1 min-w-0 flex items-center gap-3">
           <h2 className="text-[18px] font-bold text-[#1a1a1a] truncate">{c.name}</h2>
+          <IntExtBadge internal={c.internal} />
           <span className="text-[12px] text-[#6B7280] truncate">{c.title}</span>
           <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full border ${stage.cls}`}>
             {stage.label}
@@ -1243,6 +1270,19 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
                     <Row icon={<MapPin size={13} />}>{c.location}</Row>
                   </div>
                 </Section>
+
+                {c.appliedLocations && c.appliedLocations.length > 0 && (
+                  <Section title="Applied Locations">
+                    <ul className="space-y-1.5">
+                      {c.appliedLocations.map((loc) => (
+                        <li key={loc} className="flex items-center gap-2 text-[13px] text-[#4A5568]">
+                          <span className="w-1 h-1 rounded-full bg-[#cbd5e0] shrink-0" />
+                          {loc}
+                        </li>
+                      ))}
+                    </ul>
+                  </Section>
+                )}
 
                 <Section title="Screening Criteria">
                   <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -1654,6 +1694,21 @@ function Stars({ value = 0, onChange, interactive = false }) {
         </button>
       ))}
     </div>
+  );
+}
+
+function IntExtBadge({ internal }) {
+  return (
+    <span
+      title={internal ? "Internal Applicant" : "External Applicant"}
+      className={`shrink-0 text-[9px] font-bold tracking-wide px-1 py-0.5 rounded border cursor-default ${
+        internal
+          ? "bg-sgi-50 text-sgi border-sgi-100"
+          : "bg-[#f2f2f2] text-[#777] border-[#e4e4e4]"
+      }`}
+    >
+      {internal ? "Int" : "Ext"}
+    </span>
   );
 }
 

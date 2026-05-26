@@ -97,6 +97,29 @@ const genSalary = (years, match, seed) => {
   return `$${rounded.toLocaleString()}`;
 };
 
+// candidates can apply to multiple locations (ADP API). Build a deterministic
+// list: ~50% single, ~30% with 2-3, ~20% with 4-5 locations.
+const EXTRA_LOCS = [
+  "Indianapolis, IN", "Nashville, TN", "Cincinnati, OH", "Lexington, KY",
+  "Louisville, KY", "Charlotte, NC", "Memphis, TN", "Columbus, OH",
+  "Birmingham, AL", "Knoxville, TN",
+];
+// Exactly six internal applicants; several in the default To Review view.
+const INTERNAL_IDS = new Set(["c1", "c3", "c5", "tr-4", "tr-11", "s2"]);
+
+const buildLocs = (base, seed) => {
+  const lc = seed % 10;
+  // ~70% single, ~20% with 2-3 locations, ~10% with 4-5
+  const extraN = lc < 7 ? 0 : lc < 9 ? 1 + (seed % 2) : 3 + (seed % 2);
+  const pool = EXTRA_LOCS.filter((l) => l !== base);
+  const out = [base];
+  for (let k = 0; k < extraN && out.length < 5; k++) {
+    const cand = pool[(seed + k * 3) % pool.length];
+    if (!out.includes(cand)) out.push(cand);
+  }
+  return out;
+};
+
 // Helper: build a candidate with sensible defaults
 const make = (o) => {
   const seed = hashStr(o.id || o.name || "x");
@@ -111,6 +134,8 @@ const make = (o) => {
   appliedVia: SOURCES[seed % SOURCES.length],
   desiredSalary: genSalary(o.years, o.match, seed),
   aiReviewed: true,
+  internal: INTERNAL_IDS.has(o.id),
+  appliedLocations: buildLocs(o.location, seed),
   ...o,
   activity: o.activity || [
     { date: o.applied, text: "Applied via ADP" },
