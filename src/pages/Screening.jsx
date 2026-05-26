@@ -53,7 +53,7 @@ const ADVANCE_TABLE = { "To Review": "To Screen", Screening: "To Interview", Int
 const ADVANCE_DRAWER = { "To Review": "Advance to Screening", Screening: "Advance to Interview", Interview: "Send Offer" };
 
 const SOURCE_CLS = {
-  Indeed: "bg-[#eef4fb] text-sgi-700 border-sgi-100",
+  Indeed: "bg-[#EFF6FF] text-sgi-700 border-sgi-100",
   LinkedIn: "bg-[#eaf1fb] text-[#0a66c2] border-[#cfe0f5]",
   ZipRecruiter: "bg-[#f0f7ec] text-green-700 border-green-200",
 };
@@ -396,7 +396,7 @@ export default function Screening() {
             <button
               onClick={() => setColsOpen((o) => !o)}
               className={`flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[13px] font-medium transition ${
-                colsOpen ? "border-sgi bg-sgi-50 text-sgi" : "border-sgi-200 text-sgi bg-white hover:bg-sgi-50"
+                colsOpen ? "border-sgi bg-sgi-50 text-sgi" : "border-sgi text-sgi bg-white hover:bg-sgi-50"
               }`}
             >
               <Columns3 size={14} /> Columns
@@ -439,14 +439,14 @@ export default function Screening() {
               setFocusIndex(i < 0 ? 0 : i);
               setFocusOpen(true);
             }}
-            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-sgi-200 text-sgi bg-white text-[13px] font-medium hover:bg-sgi-50 transition"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-sgi text-sgi bg-white text-[13px] font-medium hover:bg-sgi-50 transition"
           >
             <Eye size={14} /> Focus Mode
           </button>
         </div>
 
         {/* ----------------------- AI search bar ----------------------- */}
-        <div className="mt-3 flex items-center gap-2 bg-[#f8faff] border border-sgi-100 rounded-lg pl-3 pr-1.5 py-1.5">
+        <div className="mt-3 flex items-center gap-2 bg-[#EFF6FF] border border-sgi-100 rounded-lg pl-3 pr-1.5 py-1.5">
           <Sparkles size={15} className="text-sgi shrink-0" />
           <input
             value={aiQuery}
@@ -799,11 +799,11 @@ export default function Screening() {
       <div
         className={`shrink-0 transition-[height] duration-200 ease-out ${
           selectedIds.size > 0
-            ? "h-[52px] border-t border-[#C7D9F8] shadow-[0_-4px_12px_rgba(0,0,0,0.1)]"
+            ? "h-[52px] border-t border-[#BFDBFE] shadow-[0_-4px_12px_rgba(0,0,0,0.1)]"
             : "h-0 overflow-hidden"
         }`}
       >
-        <div className="h-[52px] bg-[#EEF4FF] px-6 flex items-center justify-between">
+        <div className="h-[52px] bg-[#EFF6FF] px-6 flex items-center justify-between">
           <div className="flex items-center gap-3 text-[13px]">
             <span className="font-medium text-[#1a1a1a]">
               {selectedIds.size} candidate{selectedIds.size === 1 ? "" : "s"} selected
@@ -851,7 +851,7 @@ export default function Screening() {
                         setBulkAdvOpen(false);
                         showToast(`${n} candidate${n === 1 ? "" : "s"} moved to ${o.stage}`);
                       }}
-                      className="block w-full text-left text-[13px] text-[#1a1a1a] px-4 py-2 hover:bg-[#EEF4FF]"
+                      className="block w-full text-left text-[13px] text-[#1a1a1a] px-4 py-2 hover:bg-[#EFF6FF]"
                     >
                       {o.label}
                     </button>
@@ -911,7 +911,7 @@ export default function Screening() {
                 <button
                   key={n}
                   onClick={() => { setRpp(n); setRppOpen(false); }}
-                  className={`block w-full text-left px-3 py-1.5 text-[12px] hover:bg-[#f8faff] ${
+                  className={`block w-full text-left px-3 py-1.5 text-[12px] hover:bg-[#EFF6FF] ${
                     n === rpp ? "text-sgi font-medium" : "text-[#1a1a1a]"
                   }`}
                 >
@@ -1728,7 +1728,7 @@ function ReqOption({ active, onClick, label, count }) {
     <button
       onClick={onClick}
       className={`w-full text-left rounded-md px-3 py-2 flex items-center justify-between gap-2 transition ${
-        active ? "bg-sgi-50" : "hover:bg-[#f0f4ff]"
+        active ? "bg-sgi-50" : "hover:bg-[#EFF6FF]"
       }`}
     >
       <span className="text-[13px] text-[#1a1a1a] truncate">
