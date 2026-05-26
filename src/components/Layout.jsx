@@ -25,25 +25,25 @@ export default function Layout() {
     <div className="min-h-screen flex bg-white text-[#1a1a1a]">
       {/* Sidebar — blue-tinted */}
       <aside
-        className={`bg-white border-r border-[#DBEAFE] flex flex-col transition-all duration-200 ease-out ${
+        className={`bg-white border-r border-[#C9DCF4] flex flex-col transition-all duration-200 ease-out ${
           collapsed ? "w-[56px]" : "w-[220px]"
         }`}
       >
         <div
-          className={`h-12 border-b border-[#DBEAFE] flex items-center ${
+          className={`h-12 border-b border-[#C9DCF4] flex items-center ${
             collapsed ? "justify-center px-2" : "justify-between px-4"
           }`}
         >
           {!collapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-6 h-6 rounded bg-[#2563EB] text-white grid place-items-center font-semibold text-[10px] shrink-0">
+              <div className="w-6 h-6 rounded bg-[#023E8A] text-white grid place-items-center font-semibold text-[10px] shrink-0">
                 SGI
               </div>
               <div className="leading-tight min-w-0">
-                <div className="text-[13px] font-semibold text-[#2563EB] truncate">
+                <div className="text-[13px] font-semibold text-[#023E8A] truncate">
                   Safe-Guard
                 </div>
-                <div className="text-[10px] text-[#60A5FA] truncate">
+                <div className="text-[10px] text-[#2979D4] truncate">
                   Recruiter Portal
                 </div>
               </div>
@@ -51,7 +51,7 @@ export default function Layout() {
           )}
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className="p-1 rounded text-[#6B7280] hover:bg-[#EFF6FF] hover:text-[#2563EB] transition"
+            className="p-1 rounded text-[#6B7280] hover:bg-[#E8F0FB] hover:text-[#023E8A] transition"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand" : "Collapse"}
           >
@@ -71,20 +71,20 @@ export default function Layout() {
                   collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
                 } py-1.5 rounded text-[13px] transition ${
                   isActive
-                    ? "bg-[#EFF6FF] text-[#2563EB] font-semibold"
-                    : "text-[#4A5568] hover:bg-[#EFF6FF]"
+                    ? "bg-[#E8F0FB] text-[#023E8A] font-semibold"
+                    : "text-[#4A5568] hover:bg-[#E8F0FB]"
                 }`
               }
             >
               {({ isActive }) => (
                 <>
                   {isActive && !collapsed && (
-                    <span className="absolute left-0 top-1 bottom-1 w-[2px] bg-[#2563EB] rounded-r" />
+                    <span className="absolute left-0 top-1 bottom-1 w-[2px] bg-[#023E8A] rounded-r" />
                   )}
                   <Icon
                     size={15}
                     className={`shrink-0 ${
-                      isActive ? "text-[#2563EB]" : "text-[#6B7280]"
+                      isActive ? "text-[#023E8A]" : "text-[#6B7280]"
                     }`}
                   />
                   {!collapsed && <span className="truncate">{label}</span>}
@@ -95,11 +95,11 @@ export default function Layout() {
         </nav>
 
         <div
-          className={`border-t border-[#DBEAFE] flex items-center ${
+          className={`border-t border-[#C9DCF4] flex items-center ${
             collapsed ? "justify-center p-2" : "gap-2.5 p-3"
           }`}
         >
-          <div className="w-7 h-7 rounded-full bg-[#2563EB] text-white grid place-items-center font-semibold text-[10px] shrink-0">
+          <div className="w-7 h-7 rounded-full bg-[#023E8A] text-white grid place-items-center font-semibold text-[10px] shrink-0">
             CW
           </div>
           {!collapsed && (
@@ -107,7 +107,7 @@ export default function Layout() {
               <div className="text-[12px] font-semibold text-[#1a1a1a] truncate">
                 Candace W.
               </div>
-              <div className="text-[10px] text-[#60A5FA]">Recruiter</div>
+              <div className="text-[10px] text-[#2979D4]">Recruiter</div>
             </div>
           )}
         </div>

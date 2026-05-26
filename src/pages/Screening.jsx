@@ -24,27 +24,27 @@ import { useApp } from "../store";
 const STAGE = {
   "To Review": {
     label: "To Review",
-    cls: "bg-amber-50 text-amber-700 border-amber-200",
+    cls: "bg-[#F5F0E8] text-[#92400E]",
   },
   Screening: {
     label: "Screening",
-    cls: "bg-sgi-50 text-sgi-700 border-sgi-200",
+    cls: "bg-sgi-50 text-sgi",
   },
   Interview: {
     label: "Interview",
-    cls: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    cls: "bg-indigo-50 text-indigo-700",
   },
   Offer: {
     label: "Offer",
-    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    cls: "bg-[#DCFCE7] text-[#16A34A]",
   },
   Declined: {
     label: "Declined",
-    cls: "bg-red-50 text-red-700 border-red-200",
+    cls: "bg-[#FEE2E2] text-[#DC2626]",
   },
   "Knocked Out": {
     label: "Knocked Out",
-    cls: "bg-[#f2f2f2] text-[#777] border-[#e4e4e4]",
+    cls: "bg-[#F1F5F9] text-[#475569]",
   },
 };
 
@@ -53,7 +53,7 @@ const ADVANCE_TABLE = { "To Review": "To Screen", Screening: "To Interview", Int
 const ADVANCE_DRAWER = { "To Review": "Advance to Screening", Screening: "Advance to Interview", Interview: "Send Offer" };
 
 const SOURCE_CLS = {
-  Indeed: "bg-[#EFF6FF] text-sgi-700 border-sgi-100",
+  Indeed: "bg-[#E8F0FB] text-sgi-700 border-sgi-100",
   LinkedIn: "bg-[#eaf1fb] text-[#0a66c2] border-[#cfe0f5]",
   ZipRecruiter: "bg-[#f0f7ec] text-green-700 border-green-200",
 };
@@ -109,10 +109,10 @@ const SALARY_FILTER_OPTS = [
 ];
 
 const matchBadge = (m) => {
-  if (m == null) return { text: "—", cls: "bg-[#f2f2f2] text-[#999] border-[#e6e6e6]" };
-  if (m >= 85) return { text: `${m}%`, cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-  if (m >= 70) return { text: `${m}%`, cls: "bg-amber-50 text-amber-700 border-amber-200" };
-  return { text: `${m}%`, cls: "bg-red-50 text-red-700 border-red-200" };
+  if (m == null) return { text: "—", cls: "bg-[#F1F5F9] text-[#94A3B8]" };
+  if (m >= 85) return { text: `${m}%`, cls: "bg-[#DCFCE7] text-[#16A34A]" };
+  if (m >= 70) return { text: `${m}%`, cls: "bg-[#FEF3C7] text-[#B45309]" };
+  return { text: `${m}%`, cls: "bg-[#FEE2E2] text-[#DC2626]" };
 };
 
 const fmtDate = (iso) => {
@@ -182,6 +182,27 @@ export default function Screening() {
   const bulkAdvRef = useRef(null);
   const [focusOpen, setFocusOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(0);
+  const [drawerWidth, setDrawerWidth] = useState(420); // resizable inline drawer
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => {
+      const w = Math.min(600, Math.max(320, window.innerWidth - e.clientX));
+      setDrawerWidth(w);
+    };
+    const onUp = () => setDragging(false);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+  }, [dragging]);
 
   // column filters (applied sets)
   const [srcF, setSrcF] = useState(() => new Set());
@@ -387,7 +408,7 @@ export default function Screening() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search candidates by name, email..."
-              className="w-full h-8 pl-9 pr-3 bg-white border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.1)]"
+              className="w-full h-8 pl-9 pr-3 bg-white border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2, 62, 138,0.1)]"
             />
           </div>
 
@@ -395,11 +416,11 @@ export default function Screening() {
           <div className="relative" ref={colsRef}>
             <button
               onClick={() => setColsOpen((o) => !o)}
-              className={`flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[13px] font-medium transition ${
+              className={`flex items-center gap-1.5 px-2.5 py-[5px] rounded-md border text-[12px] font-medium transition ${
                 colsOpen ? "border-sgi bg-sgi-50 text-sgi" : "border-sgi text-sgi bg-white hover:bg-sgi-50"
               }`}
             >
-              <Columns3 size={14} /> Columns
+              <Columns3 size={13} /> Columns
             </button>
             {colsOpen && (
               <div className="absolute right-0 top-full mt-1 z-30 w-52 bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] p-1.5">
@@ -439,25 +460,25 @@ export default function Screening() {
               setFocusIndex(i < 0 ? 0 : i);
               setFocusOpen(true);
             }}
-            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-sgi text-sgi bg-white text-[13px] font-medium hover:bg-sgi-50 transition"
+            className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-md border border-sgi text-sgi bg-white text-[12px] font-medium hover:bg-sgi-50 transition"
           >
-            <Eye size={14} /> Focus Mode
+            <Eye size={13} /> Focus Mode
           </button>
         </div>
 
         {/* ----------------------- AI search bar ----------------------- */}
-        <div className="mt-3 flex items-center gap-2 bg-[#EFF6FF] border border-sgi-100 rounded-lg pl-3 pr-1.5 py-1.5">
-          <Sparkles size={15} className="text-sgi shrink-0" />
+        <div className="mt-3 flex items-center gap-2 h-9 bg-[#F8FAFC] border border-[#E2E8F0] rounded-md pl-2.5 pr-1">
+          <Sparkles size={14} className="text-sgi shrink-0" />
           <input
             value={aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && runAi()}
             placeholder="Ask AI about candidates... e.g. Best candidates for Atlanta hybrid role"
-            className="flex-1 min-w-0 bg-transparent text-[13px] text-[#1a1a1a] placeholder:text-sgi-300 placeholder:italic focus:outline-none"
+            className="flex-1 min-w-0 bg-transparent text-[12.5px] text-[#1a1a1a] placeholder:text-[#94A3B8] focus:outline-none"
           />
           <button
             onClick={runAi}
-            className="shrink-0 h-7 px-3 rounded-md bg-sgi text-white text-[12px] font-semibold hover:bg-sgi-600 transition"
+            className="shrink-0 h-[26px] px-2.5 rounded bg-sgi text-white text-[11px] font-semibold hover:bg-sgi-600 transition"
           >
             Ask AI
           </button>
@@ -473,12 +494,12 @@ export default function Screening() {
                   {g.values.map((v) => (
                     <span
                       key={v.raw}
-                      className="inline-flex items-center gap-1 bg-[#EFF6FF] border border-[#BFDBFE] rounded-full px-2.5 py-[2px] text-[12px] text-[#1E40AF]"
+                      className="inline-flex items-center gap-1 bg-[#E8F0FB] border border-[#C9DCF4] rounded-full px-2.5 py-[2px] text-[12px] text-[#023E8A]"
                     >
                       {v.label}
                       <button
                         onClick={v.remove}
-                        className="text-[#93C5FD] hover:text-[#1E40AF]"
+                        className="text-[#6E9CDB] hover:text-[#023E8A]"
                         aria-label={`Remove ${v.label}`}
                       >
                         <X size={11} />
@@ -670,7 +691,7 @@ export default function Screening() {
                   {/* applied via */}
                   {isColVisible("source") && (
                     <Td>
-                      <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border ${SOURCE_CLS[c.appliedVia] || "bg-[#f5f5f5] text-[#666] border-[#e5e5e5]"}`}>
+                      <span className={`inline-block text-[11px] font-medium px-1.5 py-px rounded-full ${SOURCE_CLS[c.appliedVia] || "bg-[#f5f5f5] text-[#666]"}`}>
                         {c.appliedVia}
                       </span>
                     </Td>
@@ -706,7 +727,7 @@ export default function Screening() {
                   {/* match */}
                   {isColVisible("match") && (
                     <Td>
-                      <span className={`inline-block min-w-[42px] text-center text-[11px] font-bold px-2 py-0.5 rounded-full border tabular-nums ${mb.cls}`}>
+                      <span className={`inline-block min-w-[38px] text-center text-[11px] font-bold px-1.5 py-px rounded-full tabular-nums ${mb.cls}`}>
                         {mb.text}
                       </span>
                     </Td>
@@ -715,7 +736,7 @@ export default function Screening() {
                   {/* stage */}
                   {isColVisible("stage") && (
                     <Td>
-                      <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${stage.cls}`}>
+                      <span className={`inline-block text-[11px] font-medium px-1.5 py-px rounded-full whitespace-nowrap ${stage.cls}`}>
                         {stage.label}
                       </span>
                     </Td>
@@ -733,19 +754,18 @@ export default function Screening() {
 
                   {/* actions */}
                   <Td>
-                    <div className="flex items-center justify-center gap-1.5 text-[12px]">
+                    <div className="flex items-center justify-center gap-1.5">
                       {ADVANCE_TABLE[c.status] && (
                         <>
                           <button
                             onClick={(e) => { e.stopPropagation(); advanceCandidate(c.id); }}
-                            className="text-sgi hover:underline"
+                            className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#E8F0FB] text-[#023E8A] hover:bg-[#d8e6f8] transition"
                           >
                             {ADVANCE_TABLE[c.status]}
                           </button>
-                          <span className="text-[#d0d0d0]">·</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeclineTarget(c); }}
-                            className="text-[#DC2626] hover:underline"
+                            className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#FEE2E2] text-[#DC2626] hover:bg-[#fcd0d0] transition"
                           >
                             Decline
                           </button>
@@ -753,11 +773,10 @@ export default function Screening() {
                       )}
                       {c.status === "Offer" && (
                         <>
-                          <span className="text-[#9aa5b1]">Offer Sent</span>
-                          <span className="text-[#d0d0d0]">·</span>
+                          <span className="text-[11px] text-[#9aa5b1]">Offer Sent</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeclineTarget(c); }}
-                            className="text-[#DC2626] hover:underline"
+                            className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#FEE2E2] text-[#DC2626] hover:bg-[#fcd0d0] transition"
                           >
                             Decline
                           </button>
@@ -766,7 +785,7 @@ export default function Screening() {
                       {c.status === "Declined" && (
                         <button
                           onClick={(e) => { e.stopPropagation(); restoreCandidate(c.id); }}
-                          className="text-sgi hover:underline"
+                          className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#E8F0FB] text-[#023E8A] hover:bg-[#d8e6f8] transition"
                         >
                           Restore
                         </button>
@@ -774,7 +793,7 @@ export default function Screening() {
                       {c.status === "Knocked Out" && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openRow(c.id); }}
-                          className="text-[#9aa5b1] hover:text-[#6B7280] hover:underline"
+                          className="text-[11px] text-[#9aa5b1] hover:text-[#6B7280] hover:underline"
                         >
                           Review Manually
                         </button>
@@ -799,11 +818,11 @@ export default function Screening() {
       <div
         className={`shrink-0 transition-[height] duration-200 ease-out ${
           selectedIds.size > 0
-            ? "h-[52px] border-t border-[#BFDBFE] shadow-[0_-4px_12px_rgba(0,0,0,0.1)]"
+            ? "h-[52px] border-t border-[#C9DCF4] shadow-[0_-4px_12px_rgba(0,0,0,0.1)]"
             : "h-0 overflow-hidden"
         }`}
       >
-        <div className="h-[52px] bg-[#EFF6FF] px-6 flex items-center justify-between">
+        <div className="h-[52px] bg-[#E8F0FB] px-6 flex items-center justify-between">
           <div className="flex items-center gap-3 text-[13px]">
             <span className="font-medium text-[#1a1a1a]">
               {selectedIds.size} candidate{selectedIds.size === 1 ? "" : "s"} selected
@@ -851,7 +870,7 @@ export default function Screening() {
                         setBulkAdvOpen(false);
                         showToast(`${n} candidate${n === 1 ? "" : "s"} moved to ${o.stage}`);
                       }}
-                      className="block w-full text-left text-[13px] text-[#1a1a1a] px-4 py-2 hover:bg-[#EFF6FF]"
+                      className="block w-full text-left text-[13px] text-[#1a1a1a] px-4 py-2 hover:bg-[#E8F0FB]"
                     >
                       {o.label}
                     </button>
@@ -911,7 +930,7 @@ export default function Screening() {
                 <button
                   key={n}
                   onClick={() => { setRpp(n); setRppOpen(false); }}
-                  className={`block w-full text-left px-3 py-1.5 text-[12px] hover:bg-[#EFF6FF] ${
+                  className={`block w-full text-left px-3 py-1.5 text-[12px] hover:bg-[#E8F0FB] ${
                     n === rpp ? "text-sgi font-medium" : "text-[#1a1a1a]"
                   }`}
                 >
@@ -926,14 +945,23 @@ export default function Screening() {
       </div>
       {/* END LEFT column */}
 
-      {/* RIGHT: inline drawer (table shrinks, no overlay) */}
+      {/* RIGHT: inline drawer (table shrinks, no overlay; drag left edge to resize) */}
       <aside
-        className={`shrink-0 h-full overflow-hidden border-l border-[#ececec] transition-[width] duration-300 ease-out ${
-          drawerOpen ? "w-[420px]" : "w-0 border-l-0"
-        }`}
+        style={{ width: drawerOpen ? drawerWidth : 0 }}
+        className={`relative shrink-0 h-full overflow-hidden border-l border-[#ececec] ${
+          dragging ? "" : "transition-[width] duration-300 ease-out"
+        } ${drawerOpen ? "" : "border-l-0"}`}
       >
         {selected && (
-          <div className="w-[420px] h-full">
+          <div style={{ width: drawerWidth }} className="h-full">
+            {/* drag-to-resize handle */}
+            <div
+              onMouseDown={(e) => { e.preventDefault(); setDragging(true); }}
+              title="Drag to resize"
+              className={`absolute left-0 top-0 z-20 h-full w-1 cursor-col-resize transition-colors ${
+                dragging ? "bg-sgi-300" : "bg-[#ececec] hover:bg-[#cbd5e0]"
+              }`}
+            />
             <Drawer
               key={selected.id}
               c={selected}
@@ -1043,14 +1071,14 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
         </div>
         <div className="flex items-center gap-2 mt-3 flex-wrap">
           <IntExtBadge internal={c.internal} />
-          <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border ${stage.cls}`}>
+          <span className={`inline-block text-[11px] font-medium px-2 py-[3px] rounded-md ${stage.cls}`}>
             {stage.label}
           </span>
-          <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full border tabular-nums ${mb.cls}`}>
+          <span className={`inline-block text-[11px] font-medium px-2 py-[3px] rounded-md tabular-nums ${mb.cls}`}>
             {mb.text === "—" ? "No match" : `${mb.text} match`}
           </span>
           {c.aiReviewed && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-sgi-50 text-sgi border-sgi-100">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-[3px] rounded-md bg-sgi-50 text-sgi">
               <Sparkles size={10} /> AI Reviewed
             </span>
           )}
@@ -1144,7 +1172,7 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add a private note about this candidate…"
-              className="w-full min-h-[160px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.1)]"
+              className="w-full min-h-[160px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2, 62, 138,0.1)]"
             />
           </div>
         )}
@@ -1295,7 +1323,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
           <h2 className="text-[18px] font-bold text-[#1a1a1a] truncate">{c.name}</h2>
           <IntExtBadge internal={c.internal} />
           <span className="text-[12px] text-[#6B7280] truncate">{c.title}</span>
-          <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full border ${stage.cls}`}>
+          <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-md ${stage.cls}`}>
             {stage.label}
           </span>
         </div>
@@ -1357,10 +1385,10 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
             {tab === "overview" && (
               <div className="space-y-5">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border tabular-nums ${mb.cls}`}>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md tabular-nums ${mb.cls}`}>
                     {mb.text === "—" ? "No match" : `${mb.text} match`}
                   </span>
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${stage.cls}`}>
+                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${stage.cls}`}>
                     {stage.label}
                   </span>
                 </div>
@@ -1429,7 +1457,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add a private note about this candidate…"
-                className="w-full min-h-[200px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.1)]"
+                className="w-full min-h-[200px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2, 62, 138,0.1)]"
               />
             )}
           </div>
@@ -1728,7 +1756,7 @@ function ReqOption({ active, onClick, label, count }) {
     <button
       onClick={onClick}
       className={`w-full text-left rounded-md px-3 py-2 flex items-center justify-between gap-2 transition ${
-        active ? "bg-sgi-50" : "hover:bg-[#EFF6FF]"
+        active ? "bg-sgi-50" : "hover:bg-[#E8F0FB]"
       }`}
     >
       <span className="text-[13px] text-[#1a1a1a] truncate">
@@ -1766,10 +1794,8 @@ function IntExtBadge({ internal }) {
   return (
     <span
       title={internal ? "Internal Applicant" : "External Applicant"}
-      className={`shrink-0 text-[9px] font-bold tracking-wide px-1 py-0.5 rounded border cursor-default ${
-        internal
-          ? "bg-sgi-50 text-sgi border-sgi-100"
-          : "bg-[#f2f2f2] text-[#777] border-[#e4e4e4]"
+      className={`shrink-0 text-[9px] font-bold tracking-wide px-1 py-0.5 rounded cursor-default ${
+        internal ? "bg-sgi-50 text-sgi" : "bg-[#F1F5F9] text-[#475569]"
       }`}
     >
       {internal ? "Int" : "Ext"}
@@ -1850,8 +1876,8 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
         </div>
 
         <div className="px-6 py-6 space-y-5 max-h-[75vh] overflow-y-auto">
-          <div className="flex items-center gap-2 px-3 py-2 bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
-            <Info size={13} className="text-[#2563EB] shrink-0" />
+          <div className="flex items-center gap-2 px-3 py-2 bg-[#E8F0FB] border border-[#C9DCF4] rounded-md">
+            <Info size={13} className="text-[#023E8A] shrink-0" />
             <span className="text-[12px] text-[#1a1a1a]">
               You've selected {count} application{count === 1 ? "" : "s"}.
             </span>
@@ -1867,13 +1893,13 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
                     name="decline-action"
                     checked={action === opt.id}
                     onChange={() => setAction(opt.id)}
-                    className="w-3.5 h-3.5 accent-[#2563EB]"
+                    className="w-3.5 h-3.5 accent-[#023E8A]"
                   />
                   {opt.label}
                 </label>
               ))}
             </div>
-            <p className="mt-2 text-[12px] text-[#2563EB]">
+            <p className="mt-2 text-[12px] text-[#023E8A]">
               Application status will be marked as '{selectedAction.status}'.
             </p>
           </div>
@@ -1883,7 +1909,7 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
           <button onClick={onCancel} className="h-9 px-4 inline-flex items-center bg-white border border-[#E2E8F0] text-[#4A5568] rounded-md text-[13px] font-medium hover:bg-[#F7FAFC]">
             Cancel
           </button>
-          <button onClick={onConfirm} className="h-9 px-4 inline-flex items-center bg-[#2563EB] text-white rounded-md text-[13px] font-medium hover:bg-[#1D4ED8]">
+          <button onClick={onConfirm} className="h-9 px-4 inline-flex items-center bg-[#023E8A] text-white rounded-md text-[13px] font-medium hover:bg-[#1A5EBF]">
             Decline Application{count === 1 ? "" : "s"}
           </button>
         </div>

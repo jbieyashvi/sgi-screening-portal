@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { candidates as seedCandidates, requisitions } from "./data/mockData";
 
 const AppCtx = createContext(null);
@@ -148,17 +148,24 @@ export function useApp() {
 function ToastStack({ toasts }) {
   return (
     <div className="fixed top-6 right-6 z-[99999] flex flex-col gap-2.5">
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          className={`${t.leaving ? "toast-out" : "toast-in"} flex items-center gap-2 min-w-[200px] max-w-[300px] px-3.5 py-2 rounded-md text-white text-[13px] font-medium shadow-[0_4px_12px_rgba(0,0,0,0.2)] ${
-            t.type === "error" ? "bg-[#DC2626]" : "bg-[#2563EB]"
-          }`}
-        >
-          <Check size={14} className="shrink-0" />
-          <span>{t.message}</span>
-        </div>
-      ))}
+      {toasts.map((t) => {
+        const error = t.type === "error";
+        return (
+          <div
+            key={t.id}
+            className={`${t.leaving ? "toast-out" : "toast-in"} flex items-center gap-2.5 min-w-[240px] max-w-[340px] px-4 py-3 rounded-lg bg-white border-l-4 text-[13px] font-medium text-[#1E293B] shadow-[0_4px_12px_rgba(0,0,0,0.1)] ${
+              error ? "border-[#DC2626]" : "border-[#023E8A]"
+            }`}
+          >
+            {error ? (
+              <X size={16} className="shrink-0 text-[#DC2626]" />
+            ) : (
+              <Check size={16} className="shrink-0 text-[#023E8A]" />
+            )}
+            <span>{t.message}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

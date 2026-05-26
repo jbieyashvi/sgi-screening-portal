@@ -53,7 +53,7 @@ export default function Dashboard() {
           </button>
           <Link
             to="/upload"
-            className="h-8 px-3.5 inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-md text-[13px] font-medium hover:bg-[#1D4ED8]"
+            className="h-8 px-3.5 inline-flex items-center gap-2 bg-[#023E8A] text-white rounded-md text-[13px] font-medium hover:bg-[#1A5EBF]"
           >
             <Upload size={14} /> Upload Resumes
           </Link>
