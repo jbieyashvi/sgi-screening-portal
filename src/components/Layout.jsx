@@ -3,7 +3,6 @@ import { NavLink, Outlet } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
-  BarChart3,
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react";
@@ -11,7 +10,6 @@ import {
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/screening", label: "Screening", icon: Users },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 export default function Layout() {

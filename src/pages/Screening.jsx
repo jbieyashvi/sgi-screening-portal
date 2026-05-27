@@ -375,14 +375,14 @@ export default function Screening() {
   const colHeader = (key) => {
     switch (key) {
       case "requisition":
-        return <Th key={key}>Requisition</Th>;
+        return <Th key={key} className="min-w-[120px] max-w-[150px]">Requisition</Th>;
       case "contact":
-        return <Th key={key}>Contact</Th>;
+        return <Th key={key} className="min-w-[160px] max-w-[200px]">Contact</Th>;
       case "links":
-        return <Th key={key} className="text-center min-w-[90px]">Links</Th>;
+        return <Th key={key} className="text-center min-w-[90px] max-w-[90px]">Links</Th>;
       case "source":
         return (
-          <Th key={key} className="min-w-[90px]">
+          <Th key={key} className="min-w-[90px] max-w-[120px]">
             <FilterHead label="Applied Via">
               <ColumnFilter id="source" openFilter={openFilter} setOpenFilter={setOpenFilter} options={sourceOpts} applied={srcF} onApply={setSrcF} showBadge forceActive={aiChips.some((ch) => ch.category === "APPLIED VIA")} />
             </FilterHead>
@@ -390,17 +390,17 @@ export default function Screening() {
         );
       case "location":
         return (
-          <Th key={key} className="min-w-[100px]">
+          <Th key={key} className="min-w-[100px] max-w-[160px]">
             <FilterHead label="Location">
               <ColumnFilter id="location" openFilter={openFilter} setOpenFilter={setOpenFilter} options={locationOpts} applied={locF} onApply={setLocF} forceActive={aiChips.some((ch) => ch.category === "LOCATION")} />
             </FilterHead>
           </Th>
         );
       case "applied":
-        return <Th key={key} className="min-w-[90px]">Applied</Th>;
+        return <Th key={key} className="min-w-[90px] max-w-[110px]">Applied</Th>;
       case "salary":
         return (
-          <Th key={key} className="min-w-[110px]">
+          <Th key={key} className="min-w-[110px] max-w-[130px]">
             <FilterHead label="Desired Salary">
               <ColumnFilter id="salary" openFilter={openFilter} setOpenFilter={setOpenFilter} options={SALARY_FILTER_OPTS} applied={salaryF} onApply={setSalaryF} forceActive={aiChips.some((ch) => ch.category === "SALARY")} />
             </FilterHead>
@@ -408,7 +408,7 @@ export default function Screening() {
         );
       case "match":
         return (
-          <Th key={key} className="min-w-[70px]">
+          <Th key={key} className="min-w-[70px] max-w-[90px]">
             <FilterHead label="Match">
               <ColumnFilter id="match" openFilter={openFilter} setOpenFilter={setOpenFilter} options={MATCH_FILTER_OPTS} applied={matchF} onApply={setMatchF} showBadge />
             </FilterHead>
@@ -416,16 +416,16 @@ export default function Screening() {
         );
       case "stage":
         return (
-          <Th key={key} className="min-w-[90px]">
+          <Th key={key} className="min-w-[90px] max-w-[120px]">
             <FilterHead label="Stage">
               <ColumnFilter id="stage" openFilter={openFilter} setOpenFilter={setOpenFilter} options={stageOpts} applied={stageF} onApply={setStageF} showBadge forceActive={aiChips.some((ch) => ch.category === "STAGE")} />
             </FilterHead>
           </Th>
         );
       case "hiringManager":
-        return <Th key={key} className="min-w-[110px]">Hiring Manager</Th>;
+        return <Th key={key} className="min-w-[110px] max-w-[140px]">Hiring Manager</Th>;
       case "recruiter":
-        return <Th key={key} className="min-w-[100px]">Recruiter</Th>;
+        return <Th key={key} className="min-w-[100px] max-w-[130px]">Recruiter</Th>;
       default:
         return null;
     }
@@ -517,21 +517,21 @@ export default function Screening() {
   const visibleCols = colOrder.filter((k) => isColVisible(k));
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-white w-full max-w-[1680px] mx-auto">
       {/* LEFT: table column (shrinks when drawer open) */}
       <div className="flex-1 flex flex-col min-w-0">
       {/* ---------------------------- top bar ---------------------------- */}
-      <div className="px-5 pt-4 pb-3 border-b border-[#f0f0f0]">
+      <div className="px-5 pt-2.5 pb-3 border-b border-[#f0f0f0]">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="text-[20px] font-bold text-[#1a1a1a] leading-none">
+            <h1 className="text-[18px] font-bold text-[#1a1a1a] leading-none">
               Candidates
             </h1>
             {/* Requisition dropdown */}
             <div className="relative" ref={reqRef}>
               <button
                 onClick={() => setReqOpen((o) => !o)}
-                className={`flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[13px] transition ${
+                className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[13px] transition ${
                   reqOpen
                     ? "border-sgi-300 bg-sgi-50 text-sgi"
                     : "border-[#E2E8F0] text-[#4A5568] hover:bg-[#F7FAFC]"
@@ -581,7 +581,7 @@ export default function Screening() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search candidates by name, email..."
-              className="w-full h-8 pl-9 pr-3 bg-white border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2, 62, 138,0.1)]"
+              className="w-full h-7 pl-9 pr-3 bg-white border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2, 62, 138,0.1)]"
             />
           </div>
 
@@ -589,7 +589,7 @@ export default function Screening() {
           <div className="relative" ref={uploadRef}>
             <button
               onClick={() => setUploadOpen((o) => !o)}
-              className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-md border border-sgi text-sgi bg-white text-[12px] font-medium hover:bg-sgi-50 transition"
+              className="flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-sgi text-sgi bg-white text-[12px] font-medium hover:bg-sgi-50 transition"
             >
               <Upload size={13} /> Upload Resume
             </button>
@@ -615,7 +615,7 @@ export default function Screening() {
           <div className="relative" ref={colsRef}>
             <button
               onClick={() => setColsOpen((o) => !o)}
-              className={`flex items-center gap-1.5 px-2.5 py-[5px] rounded-md border text-[12px] font-medium transition ${
+              className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[12px] font-medium transition ${
                 colsOpen ? "border-sgi bg-sgi-50 text-sgi" : "border-sgi text-sgi bg-white hover:bg-sgi-50"
               }`}
             >
@@ -680,7 +680,7 @@ export default function Screening() {
               setFocusIndex(i < 0 ? 0 : i);
               setFocusOpen(true);
             }}
-            className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-md border border-sgi text-sgi bg-white text-[12px] font-medium hover:bg-sgi-50 transition"
+            className="flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-sgi text-sgi bg-white text-[12px] font-medium hover:bg-sgi-50 transition"
           >
             <Eye size={13} /> Focus Mode
           </button>
@@ -754,9 +754,9 @@ export default function Screening() {
               <Th className="w-9 pl-5">
                 <SelectAll ids={pageRows.map((c) => c.id)} selectedIds={selectedIds} setSelectedIds={setSelectedIds} />
               </Th>
-              <Th>Name</Th>
+              <Th className="min-w-[180px] max-w-[220px]">Name</Th>
               {visibleCols.map((key) => colHeader(key))}
-              <Th className="text-center min-w-[140px]">Actions</Th>
+              <Th className="text-center min-w-[140px] max-w-[160px]">Actions</Th>
             </tr>
           </thead>
           <tbody>
@@ -1084,27 +1084,48 @@ export default function Screening() {
       setAiBusy(false);
       const next = [];
       const add = (category, value, test) => next.push({ id: `ai-${category}-${value}`, category, value, test });
+      const has = (loc, city) => (loc || "").toLowerCase().includes(city.toLowerCase());
 
-      if (/atlanta|hybrid/.test(q)) {
-        add("LOCATION", "Atlanta", (c) => /,\s*GA$/.test(c.location));
-        add("WORK TYPE", "Hybrid", (c) => !!c.hybridOK);
-      }
+      // LOCATION — scan for known city names
+      const CITIES = ["Atlanta", "Marietta", "Decatur", "Duluth", "Kennesaw", "Roswell", "Alpharetta", "Sandy Springs", "Woodstock", "Chamblee", "Indianapolis", "Columbus", "Knoxville", "Cincinnati"];
+      CITIES.forEach((city) => {
+        if (q.includes(city.toLowerCase())) {
+          add("LOCATION", city, (c) => has(c.location, city) || (c.appliedLocations || []).some((l) => has(l, city)));
+        }
+      });
+
+      // SORT
+      if (/\b(best|top|highest|ranked|match)\b/.test(q)) add("SORT", "Best Match", () => true);
+
+      // APPLIED VIA
       if (/linkedin/.test(q)) add("APPLIED VIA", "LinkedIn", (c) => c.appliedVia === "LinkedIn");
       if (/indeed/.test(q)) add("APPLIED VIA", "Indeed", (c) => c.appliedVia === "Indeed");
-      if (/ziprecruiter|zip recruiter/.test(q)) add("APPLIED VIA", "ZipRecruiter", (c) => c.appliedVia === "ZipRecruiter");
-      if (/\bsql\b/.test(q)) add("SKILLS", "SQL", (c) => c.sql === "Advanced");
-      if (/python/.test(q)) add("SKILLS", "Python", (c) => c.sql === "Advanced");
-      if (/analytics|\bdata\b/.test(q) && !/\bsql\b|python/.test(q)) add("SKILLS", "Analytics", (c) => c.sql === "Advanced");
-      if (/salary|budget|under|below/.test(q) || /\d{2,3}\s*k/.test(q)) {
-        const m = q.match(/(\d{2,3})\s*k/) || q.match(/\b(\d{2,3})\b/);
-        const k = m ? Number(m[1]) : 150;
-        add("SALARY", `≤$${k}K`, (c) => salNum(c.desiredSalary) <= k * 1000);
-      }
+      if (/ziprecruiter|\bzip\b/.test(q)) add("APPLIED VIA", "ZipRecruiter", (c) => c.appliedVia === "ZipRecruiter");
+
+      // SKILLS (single chip for any skill keyword)
+      if (/\bsql\b|python|tableau|looker|analytics|\bdata\b|excel|snowflake/.test(q)) add("SKILLS", "SQL & Python", (c) => c.sql === "Advanced");
+
+      // STAGE
       if (/screening/.test(q)) add("STAGE", "Screening", (c) => c.status === "Screening");
       if (/to review|\breview\b/.test(q)) add("STAGE", "To Review", (c) => c.status === "To Review");
+      if (/interview/.test(q)) add("STAGE", "Interview", (c) => c.status === "Interview");
+      if (/declin/.test(q)) add("STAGE", "Declined", (c) => c.status === "Declined");
+
+      // WORK TYPE
+      if (/hybrid/.test(q)) add("WORK TYPE", "Hybrid", (c) => !!c.hybridOK);
+      if (/remote/.test(q)) add("WORK TYPE", "Remote", (c) => !c.hybridOK);
+      if (/on-?site/.test(q)) add("WORK TYPE", "On-site", (c) => !!c.hybridOK);
+
+      // TYPE
       if (/\binternal\b|\bint\b/.test(q)) add("TYPE", "Internal", (c) => c.internal === true);
       if (/\bexternal\b|\bext\b/.test(q)) add("TYPE", "External", (c) => !c.internal);
-      if (/\btop\b|\bbest\b|highest match/.test(q)) add("SORT", "Best Match", () => true);
+
+      // SALARY — any number followed by k
+      const m = q.match(/(\d{2,3})\s*k/);
+      if (m) {
+        const k = Number(m[1]);
+        add("SALARY", `≤$${k}K`, (c) => salNum(c.desiredSalary) <= k * 1000);
+      }
 
       setAiChips((prev) => {
         const ids = new Set(prev.map((c) => c.id));
