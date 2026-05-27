@@ -11,12 +11,16 @@ import {
   Zap,
   Trash2,
   Download,
-  Mail,
-  Phone,
-  MapPin,
+  Upload,
+  UploadCloud,
+  FileText,
+  Files,
+  Globe,
+  RefreshCw,
   Columns3,
   Eye,
   Info,
+  GripVertical,
 } from "lucide-react";
 import { useApp } from "../store";
 
@@ -128,6 +132,7 @@ const fmtDate = (iso) => {
 const COLUMNS = [
   { key: "requisition", label: "Requisition" },
   { key: "contact", label: "Contact" },
+  { key: "links", label: "Links" },
   { key: "source", label: "Applied Via" },
   { key: "location", label: "Location" },
   { key: "applied", label: "Applied Date" },
@@ -139,23 +144,7 @@ const COLUMNS = [
 ];
 
 // hidden by default
-const DEFAULT_HIDDEN = ["requisition", "hiringManager", "recruiter"];
-
-// Columns dropdown order (Name + Actions are locked, always visible)
-const COLUMN_TOGGLES = [
-  { key: "name", label: "Name", locked: true },
-  { key: "contact", label: "Contact" },
-  { key: "source", label: "Applied Via" },
-  { key: "location", label: "Location" },
-  { key: "applied", label: "Applied Date" },
-  { key: "salary", label: "Desired Salary" },
-  { key: "match", label: "Match Score" },
-  { key: "stage", label: "Stage" },
-  { key: "actions", label: "Actions", locked: true },
-  { key: "hiringManager", label: "Hiring Manager" },
-  { key: "recruiter", label: "Recruiter" },
-  { key: "requisition", label: "Requisition" },
-];
+const DEFAULT_HIDDEN = ["requisition", "source", "hiringManager", "recruiter"];
 
 const STAT_CARDS = [
   { key: "all", label: "Total", color: "text-[#1a1a1a]" },
@@ -175,6 +164,11 @@ export default function Screening() {
   const [reqFilter, setReqFilter] = useState("REQ-2715");
   const [query, setQuery] = useState("");
   const [aiQuery, setAiQuery] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiChips, setAiChips] = useState([]); // [{id,label,test}]
+  const [aiHighlightIds, setAiHighlightIds] = useState(() => new Set());
+  const aiSort = aiChips.some((ch) => ch.category === "SORT");
+  const aiTimer = useRef(null);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDecline, setBulkDecline] = useState(false);
@@ -214,6 +208,22 @@ export default function Screening() {
   const [openFilter, setOpenFilter] = useState(null); // "source" | "location" | "stage" | "match" | "salary" | null
 
   const [hiddenCols, setHiddenCols] = useState(() => new Set(DEFAULT_HIDDEN));
+  const [colOrder, setColOrder] = useState(() => COLUMNS.map((c) => c.key)); // reorderable data cols
+  const [dragCol, setDragCol] = useState(null);
+
+  const moveCol = (from, to) => {
+    if (!from || from === to) return;
+    setColOrder((prev) => {
+      const a = [...prev];
+      const fi = a.indexOf(from);
+      const ti = a.indexOf(to);
+      if (fi < 0 || ti < 0) return prev;
+      a.splice(fi, 1);
+      a.splice(ti, 0, from);
+      return a;
+    });
+  };
+  const colLabel = (key) => COLUMNS.find((c) => c.key === key)?.label || key;
   const [colsOpen, setColsOpen] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
   const [rpp, setRpp] = useState(10);
@@ -223,11 +233,16 @@ export default function Screening() {
   const colsRef = useRef(null);
   const reqRef = useRef(null);
   const rppRef = useRef(null);
+  const uploadRef = useRef(null);
+
+  const [uploadOpen, setUploadOpen] = useState(false); // tiny dropdown
+  const [uploadModal, setUploadModal] = useState(null); // null | "single" | "bulk"
 
   useOutside(colsRef, colsOpen, () => setColsOpen(false));
   useOutside(reqRef, reqOpen, () => setReqOpen(false));
   useOutside(rppRef, rppOpen, () => setRppOpen(false));
   useOutside(bulkAdvRef, bulkAdvOpen, () => setBulkAdvOpen(false));
+  useOutside(uploadRef, uploadOpen, () => setUploadOpen(false));
 
   const isColVisible = (key) => !hiddenCols.has(key);
 
@@ -254,13 +269,14 @@ export default function Screening() {
       if (stageF.size && !stageF.has(c.status)) return false;
       if (matchF.size && !matchF.has(matchBucket(c.match))) return false;
       if (salaryF.size && !salaryF.has(salaryBucket(c.desiredSalary))) return false;
+      if (aiChips.length && !aiChips.every((ch) => ch.test(c))) return false;
       if (q) {
         const hay = `${c.name} ${c.email} ${c.title} ${c.location}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [reqCandidates, query, srcF, locF, stageF, matchF, salaryF]);
+  }, [reqCandidates, query, srcF, locF, stageF, matchF, salaryF, aiChips]);
 
   // filter dropdown option lists
   const sourceOpts = SOURCE_FILTER_OPTS;
@@ -279,16 +295,17 @@ export default function Screening() {
   const sorted = useMemo(
     () =>
       [...filtered].sort((a, b) => {
+        if (aiSort) return (b.match || 0) - (a.match || 0);
         const r = rank(a.status) - rank(b.status);
         if (r !== 0) return r;
         return (b.match || 0) - (a.match || 0);
       }),
-    [filtered]
+    [filtered, aiSort]
   );
 
   // reset to page 1 whenever the filter/result set changes (render-time adjust)
   const totalPages = Math.max(1, Math.ceil(sorted.length / rpp));
-  const filterKey = `${reqFilter}|${query}|${rpp}|${[...srcF].sort()}|${[...locF].sort()}|${[...stageF].sort()}|${[...matchF].sort()}|${[...salaryF].sort()}`;
+  const filterKey = `${reqFilter}|${query}|${rpp}|${[...srcF].sort()}|${[...locF].sort()}|${[...stageF].sort()}|${[...matchF].sort()}|${[...salaryF].sort()}|${aiChips.map((c) => c.id).join(",")}`;
   const [prevKey, setPrevKey] = useState(filterKey);
   if (filterKey !== prevKey) {
     setPrevKey(filterKey);
@@ -321,7 +338,8 @@ export default function Screening() {
   const colSpanCount =
     1 + 1 + COLUMNS.filter((c) => isColVisible(c.key)).length + 1; // checkbox + name + visible data cols + actions
 
-  // active filters — grouped by type, with an individually-removable pill per value
+  // active filters — one gray category label + individual value chips; column-filter
+  // sets and AI chips merge under the same category label.
   const optLabel = (opts, v) => opts.find((o) => o.value === v)?.label ?? v;
   const removeFromSet = (setter, v) =>
     setter((prev) => {
@@ -329,26 +347,174 @@ export default function Screening() {
       n.delete(v);
       return n;
     });
-  const filterGroups = [
-    { id: "src", name: "Applied Via", set: srcF, fmt: (v) => v, setter: setSrcF },
-    { id: "loc", name: "Location", set: locF, fmt: (v) => v, setter: setLocF },
-    { id: "stg", name: "Stage", set: stageF, fmt: (v) => optLabel(STAGE_FILTER_OPTS, v), setter: setStageF },
-    { id: "mat", name: "Match", set: matchF, fmt: (v) => optLabel(MATCH_FILTER_OPTS, v), setter: setMatchF },
-    { id: "sal", name: "Desired Salary", set: salaryF, fmt: (v) => optLabel(SALARY_FILTER_OPTS, v), setter: setSalaryF },
-  ]
-    .filter((g) => g.set.size > 0)
-    .map((g) => ({
-      id: g.id,
-      name: g.name,
-      values: [...g.set].map((v) => ({ raw: v, label: g.fmt(v), remove: () => removeFromSet(g.setter, v) })),
-    }));
+  const chipGroups = (() => {
+    const map = new Map(); // category -> items[]
+    const push = (cat, item) => {
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat).push(item);
+    };
+    [...stageF].forEach((v) => push("STAGE", { key: `stg-${v}`, label: optLabel(STAGE_FILTER_OPTS, v), remove: () => removeFromSet(setStageF, v) }));
+    [...locF].forEach((v) => push("LOCATION", { key: `loc-${v}`, label: v, remove: () => removeFromSet(setLocF, v) }));
+    [...srcF].forEach((v) => push("APPLIED VIA", { key: `src-${v}`, label: v, remove: () => removeFromSet(setSrcF, v) }));
+    [...matchF].forEach((v) => push("MATCH", { key: `mat-${v}`, label: optLabel(MATCH_FILTER_OPTS, v), remove: () => removeFromSet(setMatchF, v) }));
+    [...salaryF].forEach((v) => push("SALARY", { key: `sal-${v}`, label: optLabel(SALARY_FILTER_OPTS, v), remove: () => removeFromSet(setSalaryF, v) }));
+    aiChips.forEach((ch) => push(ch.category, { key: ch.id, label: ch.value, remove: () => removeAiChip(ch.id) }));
+    return [...map.entries()].map(([category, items]) => ({ category, items }));
+  })();
   const clearAllFilters = () => {
     setSrcF(new Set());
     setLocF(new Set());
     setStageF(new Set());
     setMatchF(new Set());
     setSalaryF(new Set());
+    setAiChips([]);
+    setAiHighlightIds(new Set());
   };
+
+  // header cell per column key (renders in colOrder)
+  const colHeader = (key) => {
+    switch (key) {
+      case "requisition":
+        return <Th key={key}>Requisition</Th>;
+      case "contact":
+        return <Th key={key}>Contact</Th>;
+      case "links":
+        return <Th key={key} className="text-center min-w-[90px]">Links</Th>;
+      case "source":
+        return (
+          <Th key={key} className="min-w-[90px]">
+            <FilterHead label="Applied Via">
+              <ColumnFilter id="source" openFilter={openFilter} setOpenFilter={setOpenFilter} options={sourceOpts} applied={srcF} onApply={setSrcF} showBadge forceActive={aiChips.some((ch) => ch.category === "APPLIED VIA")} />
+            </FilterHead>
+          </Th>
+        );
+      case "location":
+        return (
+          <Th key={key} className="min-w-[100px]">
+            <FilterHead label="Location">
+              <ColumnFilter id="location" openFilter={openFilter} setOpenFilter={setOpenFilter} options={locationOpts} applied={locF} onApply={setLocF} forceActive={aiChips.some((ch) => ch.category === "LOCATION")} />
+            </FilterHead>
+          </Th>
+        );
+      case "applied":
+        return <Th key={key} className="min-w-[90px]">Applied</Th>;
+      case "salary":
+        return (
+          <Th key={key} className="min-w-[110px]">
+            <FilterHead label="Desired Salary">
+              <ColumnFilter id="salary" openFilter={openFilter} setOpenFilter={setOpenFilter} options={SALARY_FILTER_OPTS} applied={salaryF} onApply={setSalaryF} forceActive={aiChips.some((ch) => ch.category === "SALARY")} />
+            </FilterHead>
+          </Th>
+        );
+      case "match":
+        return (
+          <Th key={key} className="min-w-[70px]">
+            <FilterHead label="Match">
+              <ColumnFilter id="match" openFilter={openFilter} setOpenFilter={setOpenFilter} options={MATCH_FILTER_OPTS} applied={matchF} onApply={setMatchF} showBadge />
+            </FilterHead>
+          </Th>
+        );
+      case "stage":
+        return (
+          <Th key={key} className="min-w-[90px]">
+            <FilterHead label="Stage">
+              <ColumnFilter id="stage" openFilter={openFilter} setOpenFilter={setOpenFilter} options={stageOpts} applied={stageF} onApply={setStageF} showBadge forceActive={aiChips.some((ch) => ch.category === "STAGE")} />
+            </FilterHead>
+          </Th>
+        );
+      case "hiringManager":
+        return <Th key={key} className="min-w-[110px]">Hiring Manager</Th>;
+      case "recruiter":
+        return <Th key={key} className="min-w-[100px]">Recruiter</Th>;
+      default:
+        return null;
+    }
+  };
+
+  // body cell per column key
+  const colCell = (key, c, mb, stage) => {
+    switch (key) {
+      case "requisition":
+        return (
+          <Td key={key}>
+            <div className="text-[12px] font-medium text-sgi">{c.reqId}</div>
+            <div className="text-[11px] text-[#9aa5b1] truncate max-w-[170px]">
+              {requisitions.find((r) => r.id === c.reqId)?.title || "—"}
+            </div>
+          </Td>
+        );
+      case "contact":
+        return (
+          <Td key={key}>
+            <a href={`mailto:${c.email}`} onClick={(e) => e.stopPropagation()} className="block text-[12px] text-[#4A5568] hover:text-sgi hover:underline truncate max-w-[170px]">{c.email}</a>
+            <a href={`tel:${c.phone}`} onClick={(e) => e.stopPropagation()} className="block text-[11px] text-[#9aa5b1] hover:text-sgi">{c.phone}</a>
+          </Td>
+        );
+      case "links": {
+        const lk = c.links || {};
+        const Btn = ({ on, label, children }) => (
+          <button
+            disabled={!on}
+            onClick={(e) => { e.stopPropagation(); if (on) showToast(`Opening ${label}…`); }}
+            title={label}
+            className={on ? "opacity-75 hover:opacity-100 cursor-pointer transition" : "opacity-[0.35] cursor-default"}
+          >
+            {children}
+          </button>
+        );
+        return (
+          <Td key={key}>
+            <div className="flex items-center justify-center gap-1">
+              <Btn on={!!lk.linkedin} label="LinkedIn"><LinkedInIcon size={13} className="text-[#0A66C2]" /></Btn>
+              <Btn on={!!lk.github} label="GitHub"><GitHubIcon size={13} className="text-[#24292E]" /></Btn>
+              <Btn on={!!lk.portfolio} label="Portfolio"><Globe size={13} className="text-[#023E8A]" /></Btn>
+            </div>
+          </Td>
+        );
+      }
+      case "source":
+        return (
+          <Td key={key}>
+            <span className={`inline-block text-[11px] font-medium px-1.5 py-px rounded-full ${SOURCE_CLS[c.appliedVia] || "bg-[#f5f5f5] text-[#666]"}`}>{c.appliedVia}</span>
+          </Td>
+        );
+      case "location":
+        return (
+          <Td key={key} className="text-[12px] text-[#4A5568] whitespace-nowrap">
+            {(c.appliedLocations && c.appliedLocations[0]) || c.location}
+            {c.appliedLocations && c.appliedLocations.length > 1 && (
+              <span title={c.appliedLocations.join(", ")} className="ml-1 text-[11px] font-medium text-sgi cursor-help">
+                +{c.appliedLocations.length - 1} more
+              </span>
+            )}
+          </Td>
+        );
+      case "applied":
+        return <Td key={key} className="text-[12px] text-[#4A5568] whitespace-nowrap">{fmtDate(c.applied)}</Td>;
+      case "salary":
+        return <Td key={key} className="text-[12px] font-medium text-[#1a1a1a] tabular-nums whitespace-nowrap">{c.desiredSalary}</Td>;
+      case "match":
+        return (
+          <Td key={key}>
+            <span className={`inline-block min-w-[38px] text-center text-[11px] font-bold px-1.5 py-px rounded-full tabular-nums ${mb.cls}`}>{mb.text}</span>
+          </Td>
+        );
+      case "stage":
+        return (
+          <Td key={key}>
+            <span className={`inline-block text-[11px] font-medium px-1.5 py-px rounded-full whitespace-nowrap ${stage.cls}`}>{stage.label}</span>
+          </Td>
+        );
+      case "hiringManager":
+        return <Td key={key} className="text-[12px] text-[#4A5568] whitespace-nowrap">{c.hiringManager}</Td>;
+      case "recruiter":
+        return <Td key={key} className="text-[12px] text-[#4A5568] whitespace-nowrap">{c.recruiter}</Td>;
+      default:
+        return null;
+    }
+  };
+
+  const visibleCols = colOrder.filter((k) => isColVisible(k));
 
   return (
     <div className="flex h-screen bg-white">
@@ -393,17 +559,23 @@ export default function Screening() {
                         onClick={() => { setReqFilter(r.id); setReqOpen(false); }}
                         label={`${r.id} — ${r.title}`}
                         count={reqCounts[r.id]}
+                        sync={r.adpSync}
                       />
                     ))}
+                  <div className="my-1 border-t border-[#f0f0f0]" />
+                  <button
+                    onClick={() => { showToast("Syncing with ADP…"); setReqOpen(false); }}
+                    className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-[12px] font-medium text-sgi hover:bg-[#E8F0FB] transition"
+                  >
+                    <RefreshCw size={13} /> Sync ADP now
+                  </button>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex-1" />
-
           {/* Search */}
-          <div className="relative flex-1 min-w-[220px] max-w-[420px]">
+          <div className="relative flex-1 min-w-[220px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9aa5b1]" />
             <input
               value={query}
@@ -411,6 +583,32 @@ export default function Screening() {
               placeholder="Search candidates by name, email..."
               className="w-full h-8 pl-9 pr-3 bg-white border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2, 62, 138,0.1)]"
             />
+          </div>
+
+          {/* Upload Resume */}
+          <div className="relative" ref={uploadRef}>
+            <button
+              onClick={() => setUploadOpen((o) => !o)}
+              className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-md border border-sgi text-sgi bg-white text-[12px] font-medium hover:bg-sgi-50 transition"
+            >
+              <Upload size={13} /> Upload Resume
+            </button>
+            {uploadOpen && (
+              <div className="absolute right-0 top-full mt-1 z-30 w-[180px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.1)] py-1">
+                <button
+                  onClick={() => { setUploadOpen(false); setUploadModal("single"); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-[#1a1a1a] hover:bg-[#E8F0FB] transition"
+                >
+                  <FileText size={15} className="text-sgi" /> Single Resume
+                </button>
+                <button
+                  onClick={() => { setUploadOpen(false); setUploadModal("bulk"); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-[#1a1a1a] hover:bg-[#E8F0FB] transition"
+                >
+                  <Files size={15} className="text-sgi" /> Bulk Upload
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Columns */}
@@ -424,31 +622,52 @@ export default function Screening() {
               <Columns3 size={13} /> Columns
             </button>
             {colsOpen && (
-              <div className="absolute right-0 top-full mt-1 z-30 w-52 bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] p-1.5">
-                {COLUMN_TOGGLES.map((col) => (
+              <div className="absolute right-0 top-full mt-1 z-30 w-56 bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] p-1.5">
+                {/* locked: Name */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] opacity-60 cursor-not-allowed">
+                  <span className="w-3.5" />
+                  <input type="checkbox" checked disabled className="minicheck" />
+                  Name
+                  <span className="ml-auto text-[10px] text-[#bbb]">locked</span>
+                </label>
+
+                {/* draggable data columns */}
+                {colOrder.map((key) => (
                   <label
-                    key={col.key}
-                    className={`flex items-center gap-2.5 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] ${
-                      col.locked ? "opacity-60 cursor-not-allowed" : "hover:bg-[#fafafa] cursor-pointer"
+                    key={key}
+                    draggable
+                    onDragStart={() => setDragCol(key)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => { moveCol(dragCol, key); setDragCol(null); }}
+                    onDragEnd={() => setDragCol(null)}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] hover:bg-[#fafafa] cursor-pointer ${
+                      dragCol === key ? "opacity-50" : ""
                     }`}
                   >
+                    <GripVertical size={13} className="text-[#cbd5e0] hover:text-[#94A3B8] cursor-grab shrink-0" />
                     <input
                       type="checkbox"
-                      checked={col.locked ? true : !hiddenCols.has(col.key)}
-                      disabled={col.locked}
+                      checked={!hiddenCols.has(key)}
                       onChange={() =>
                         setHiddenCols((prev) => {
                           const next = new Set(prev);
-                          next.has(col.key) ? next.delete(col.key) : next.add(col.key);
+                          next.has(key) ? next.delete(key) : next.add(key);
                           return next;
                         })
                       }
                       className="minicheck"
                     />
-                    {col.label}
-                    {col.locked && <span className="ml-auto text-[10px] text-[#bbb]">locked</span>}
+                    {colLabel(key)}
                   </label>
                 ))}
+
+                {/* locked: Actions */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] opacity-60 cursor-not-allowed">
+                  <span className="w-3.5" />
+                  <input type="checkbox" checked disabled className="minicheck" />
+                  Actions
+                  <span className="ml-auto text-[10px] text-[#bbb]">locked</span>
+                </label>
               </div>
             )}
           </div>
@@ -471,11 +690,12 @@ export default function Screening() {
         <div className="mt-3 flex items-center gap-2 h-9 bg-[#F8FAFC] border border-[#E2E8F0] rounded-md pl-2.5 pr-1">
           <Sparkles size={14} className="text-sgi shrink-0" />
           <input
-            value={aiQuery}
+            value={aiBusy ? "" : aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && runAi()}
-            placeholder="Ask AI about candidates... e.g. Best candidates for Atlanta hybrid role"
-            className="flex-1 min-w-0 bg-transparent text-[12.5px] text-[#1a1a1a] placeholder:text-[#94A3B8] focus:outline-none"
+            disabled={aiBusy}
+            placeholder={aiBusy ? "Filtering…" : "Ask AI about candidates... e.g. Best candidates for Atlanta hybrid role"}
+            className={`flex-1 min-w-0 bg-transparent text-[12.5px] text-[#1a1a1a] focus:outline-none ${aiBusy ? "placeholder:text-sgi placeholder:font-medium" : "placeholder:text-[#94A3B8]"}`}
           />
           <button
             onClick={runAi}
@@ -486,28 +706,26 @@ export default function Screening() {
         </div>
 
         {/* -------------------- active filter chips -------------------- */}
-        {filterGroups.length > 0 && (
-          <div className="mt-3 flex items-center flex-wrap gap-x-4 gap-y-2">
-            {filterGroups.map((g) => (
-              <div key={g.id} className="flex items-center gap-1.5">
-                <span className="text-[11px] uppercase tracking-wide text-[#6B7280]">{g.name}</span>
-                <div className="flex items-center flex-wrap gap-1">
-                  {g.values.map((v) => (
-                    <span
-                      key={v.raw}
-                      className="inline-flex items-center gap-1 bg-[#E8F0FB] border border-[#C9DCF4] rounded-full px-2.5 py-[2px] text-[12px] text-[#023E8A]"
+        {chipGroups.length > 0 && (
+          <div className="mt-3 flex items-center flex-wrap gap-2">
+            {chipGroups.map((g) => (
+              <div key={g.category} className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-[#94A3B8]">{g.category}</span>
+                {g.items.map((it) => (
+                  <span
+                    key={it.key}
+                    className="inline-flex items-center gap-1 bg-[#EFF6FF] border border-[#BFDBFE] rounded-full px-2.5 py-[2px] text-[12px] text-[#023E8A]"
+                  >
+                    {it.label}
+                    <button
+                      onClick={it.remove}
+                      className="text-[#023E8A] hover:text-[#1A5EBF]"
+                      aria-label={`Remove ${it.label}`}
                     >
-                      {v.label}
-                      <button
-                        onClick={v.remove}
-                        className="text-[#6E9CDB] hover:text-[#023E8A]"
-                        aria-label={`Remove ${v.label}`}
-                      >
-                        <X size={11} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
               </div>
             ))}
             <button onClick={clearAllFilters} className="ml-auto text-[12px] text-sgi hover:underline">
@@ -537,90 +755,14 @@ export default function Screening() {
                 <SelectAll ids={pageRows.map((c) => c.id)} selectedIds={selectedIds} setSelectedIds={setSelectedIds} />
               </Th>
               <Th>Name</Th>
-              {isColVisible("requisition") && <Th>Requisition</Th>}
-              {isColVisible("contact") && <Th>Contact</Th>}
-              {isColVisible("source") && (
-                <Th className="min-w-[90px]">
-                  <FilterHead label="Applied Via">
-                    <ColumnFilter
-                      id="source"
-                      openFilter={openFilter}
-                      setOpenFilter={setOpenFilter}
-                      options={sourceOpts}
-                      applied={srcF}
-                      onApply={setSrcF}
-                      showBadge
-                    />
-                  </FilterHead>
-                </Th>
-              )}
-              {isColVisible("location") && (
-                <Th className="min-w-[100px]">
-                  <FilterHead label="Location">
-                    <ColumnFilter
-                      id="location"
-                      openFilter={openFilter}
-                      setOpenFilter={setOpenFilter}
-                      options={locationOpts}
-                      applied={locF}
-                      onApply={setLocF}
-                    />
-                  </FilterHead>
-                </Th>
-              )}
-              {isColVisible("applied") && <Th className="min-w-[90px]">Applied</Th>}
-              {isColVisible("salary") && (
-                <Th className="min-w-[110px]">
-                  <FilterHead label="Desired Salary">
-                    <ColumnFilter
-                      id="salary"
-                      openFilter={openFilter}
-                      setOpenFilter={setOpenFilter}
-                      options={SALARY_FILTER_OPTS}
-                      applied={salaryF}
-                      onApply={setSalaryF}
-                    />
-                  </FilterHead>
-                </Th>
-              )}
-              {isColVisible("match") && (
-                <Th className="min-w-[70px]">
-                  <FilterHead label="Match">
-                    <ColumnFilter
-                      id="match"
-                      openFilter={openFilter}
-                      setOpenFilter={setOpenFilter}
-                      options={MATCH_FILTER_OPTS}
-                      applied={matchF}
-                      onApply={setMatchF}
-                      showBadge
-                    />
-                  </FilterHead>
-                </Th>
-              )}
-              {isColVisible("stage") && (
-                <Th className="min-w-[90px]">
-                  <FilterHead label="Stage">
-                    <ColumnFilter
-                      id="stage"
-                      openFilter={openFilter}
-                      setOpenFilter={setOpenFilter}
-                      options={stageOpts}
-                      applied={stageF}
-                      onApply={setStageF}
-                      showBadge
-                    />
-                  </FilterHead>
-                </Th>
-              )}
-              {isColVisible("hiringManager") && <Th className="min-w-[110px]">Hiring Manager</Th>}
-              {isColVisible("recruiter") && <Th className="min-w-[100px]">Recruiter</Th>}
+              {visibleCols.map((key) => colHeader(key))}
               <Th className="text-center min-w-[140px]">Actions</Th>
             </tr>
           </thead>
           <tbody>
             {pageRows.map((c, i) => {
               const isSel = selectedId === c.id;
+              const aiHit = aiHighlightIds.has(c.id);
               const checked = selectedIds.has(c.id);
               const mb = matchBadge(c.match);
               const stage = STAGE[c.status] || STAGE["To Review"];
@@ -629,12 +771,12 @@ export default function Screening() {
                   key={c.id}
                   onClick={() => openRow(c.id)}
                   className={`group cursor-pointer border-b border-[#f3f4f6] transition relative ${
-                    isSel ? "bg-sgi-50" : i % 2 ? "bg-[#fcfcfd]" : "bg-white"
+                    isSel || aiHit ? "bg-sgi-50" : i % 2 ? "bg-[#fcfcfd]" : "bg-white"
                   } hover:bg-sgi-50/60`}
                 >
-                  {/* checkbox + selected indicator */}
+                  {/* checkbox + selected/AI indicator */}
                   <Td className="w-9 pl-5 relative">
-                    {isSel && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-sgi" />}
+                    {(isSel || aiHit) && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-sgi" />}
                     <input
                       type="checkbox"
                       checked={checked}
@@ -659,99 +801,8 @@ export default function Screening() {
                     <div className="text-[11px] text-[#9aa5b1] mt-0.5 truncate max-w-[160px]">{c.title}</div>
                   </Td>
 
-                  {/* requisition */}
-                  {isColVisible("requisition") && (
-                    <Td>
-                      <div className="text-[12px] font-medium text-sgi">{c.reqId}</div>
-                      <div className="text-[11px] text-[#9aa5b1] truncate max-w-[170px]">
-                        {requisitions.find((r) => r.id === c.reqId)?.title || "—"}
-                      </div>
-                    </Td>
-                  )}
-
-                  {/* contact */}
-                  {isColVisible("contact") && (
-                    <Td>
-                      <a
-                        href={`mailto:${c.email}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="block text-[12px] text-[#4A5568] hover:text-sgi hover:underline truncate max-w-[170px]"
-                      >
-                        {c.email}
-                      </a>
-                      <a
-                        href={`tel:${c.phone}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="block text-[11px] text-[#9aa5b1] hover:text-sgi"
-                      >
-                        {c.phone}
-                      </a>
-                    </Td>
-                  )}
-
-                  {/* applied via */}
-                  {isColVisible("source") && (
-                    <Td>
-                      <span className={`inline-block text-[11px] font-medium px-1.5 py-px rounded-full ${SOURCE_CLS[c.appliedVia] || "bg-[#f5f5f5] text-[#666]"}`}>
-                        {c.appliedVia}
-                      </span>
-                    </Td>
-                  )}
-
-                  {/* location */}
-                  {isColVisible("location") && (
-                    <Td className="text-[12px] text-[#4A5568] whitespace-nowrap">
-                      {(c.appliedLocations && c.appliedLocations[0]) || c.location}
-                      {c.appliedLocations && c.appliedLocations.length > 1 && (
-                        <span
-                          title={c.appliedLocations.join(", ")}
-                          className="ml-1 text-[11px] font-medium text-sgi cursor-help"
-                        >
-                          +{c.appliedLocations.length - 1} more
-                        </span>
-                      )}
-                    </Td>
-                  )}
-
-                  {/* applied date */}
-                  {isColVisible("applied") && (
-                    <Td className="text-[12px] text-[#4A5568] whitespace-nowrap">{fmtDate(c.applied)}</Td>
-                  )}
-
-                  {/* desired salary */}
-                  {isColVisible("salary") && (
-                    <Td className="text-[12px] font-medium text-[#1a1a1a] tabular-nums whitespace-nowrap">
-                      {c.desiredSalary}
-                    </Td>
-                  )}
-
-                  {/* match */}
-                  {isColVisible("match") && (
-                    <Td>
-                      <span className={`inline-block min-w-[38px] text-center text-[11px] font-bold px-1.5 py-px rounded-full tabular-nums ${mb.cls}`}>
-                        {mb.text}
-                      </span>
-                    </Td>
-                  )}
-
-                  {/* stage */}
-                  {isColVisible("stage") && (
-                    <Td>
-                      <span className={`inline-block text-[11px] font-medium px-1.5 py-px rounded-full whitespace-nowrap ${stage.cls}`}>
-                        {stage.label}
-                      </span>
-                    </Td>
-                  )}
-
-                  {/* hiring manager */}
-                  {isColVisible("hiringManager") && (
-                    <Td className="text-[12px] text-[#4A5568] whitespace-nowrap">{c.hiringManager}</Td>
-                  )}
-
-                  {/* recruiter */}
-                  {isColVisible("recruiter") && (
-                    <Td className="text-[12px] text-[#4A5568] whitespace-nowrap">{c.recruiter}</Td>
-                  )}
+                  {/* reorderable data columns */}
+                  {visibleCols.map((key) => colCell(key, c, mb, stage))}
 
                   {/* actions */}
                   <Td>
@@ -1014,12 +1065,69 @@ export default function Screening() {
           }}
         />
       )}
+
+      {/* upload modal */}
+      {uploadModal && (
+        <UploadModal mode={uploadModal} onClose={() => setUploadModal(null)} showToast={showToast} />
+      )}
     </div>
   );
 
   function runAi() {
-    setQuery(aiQuery);
-    if (aiQuery.trim()) showToast("Ranking candidates with AI…");
+    const q = aiQuery.trim().toLowerCase();
+    if (!q) return;
+    if (aiTimer.current) clearTimeout(aiTimer.current);
+    const salNum = (s) => Number(String(s).replace(/[^0-9]/g, ""));
+    setAiQuery(""); // clear bar, ready for next query
+    setAiBusy(true);
+    aiTimer.current = setTimeout(() => {
+      setAiBusy(false);
+      const next = [];
+      const add = (category, value, test) => next.push({ id: `ai-${category}-${value}`, category, value, test });
+
+      if (/atlanta|hybrid/.test(q)) {
+        add("LOCATION", "Atlanta", (c) => /,\s*GA$/.test(c.location));
+        add("WORK TYPE", "Hybrid", (c) => !!c.hybridOK);
+      }
+      if (/linkedin/.test(q)) add("APPLIED VIA", "LinkedIn", (c) => c.appliedVia === "LinkedIn");
+      if (/indeed/.test(q)) add("APPLIED VIA", "Indeed", (c) => c.appliedVia === "Indeed");
+      if (/ziprecruiter|zip recruiter/.test(q)) add("APPLIED VIA", "ZipRecruiter", (c) => c.appliedVia === "ZipRecruiter");
+      if (/\bsql\b/.test(q)) add("SKILLS", "SQL", (c) => c.sql === "Advanced");
+      if (/python/.test(q)) add("SKILLS", "Python", (c) => c.sql === "Advanced");
+      if (/analytics|\bdata\b/.test(q) && !/\bsql\b|python/.test(q)) add("SKILLS", "Analytics", (c) => c.sql === "Advanced");
+      if (/salary|budget|under|below/.test(q) || /\d{2,3}\s*k/.test(q)) {
+        const m = q.match(/(\d{2,3})\s*k/) || q.match(/\b(\d{2,3})\b/);
+        const k = m ? Number(m[1]) : 150;
+        add("SALARY", `≤$${k}K`, (c) => salNum(c.desiredSalary) <= k * 1000);
+      }
+      if (/screening/.test(q)) add("STAGE", "Screening", (c) => c.status === "Screening");
+      if (/to review|\breview\b/.test(q)) add("STAGE", "To Review", (c) => c.status === "To Review");
+      if (/\binternal\b|\bint\b/.test(q)) add("TYPE", "Internal", (c) => c.internal === true);
+      if (/\bexternal\b|\bext\b/.test(q)) add("TYPE", "External", (c) => !c.internal);
+      if (/\btop\b|\bbest\b|highest match/.test(q)) add("SORT", "Best Match", () => true);
+
+      setAiChips((prev) => {
+        const ids = new Set(prev.map((c) => c.id));
+        return [...prev, ...next.filter((c) => !ids.has(c.id))];
+      });
+
+      // highlight top 3 of the resulting set
+      const active = [...aiChips, ...next];
+      const matched = reqCandidates
+        .filter((c) => active.every((ch) => ch.test(c)))
+        .sort((a, b) => (b.match || 0) - (a.match || 0))
+        .slice(0, 3)
+        .map((c) => c.id);
+      setAiHighlightIds(new Set(matched));
+    }, 900);
+  }
+
+  function removeAiChip(id) {
+    setAiChips((prev) => {
+      const nextList = prev.filter((c) => c.id !== id);
+      if (nextList.length === 0) setAiHighlightIds(new Set());
+      return nextList;
+    });
   }
 }
 
@@ -1103,66 +1211,51 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
       {/* body */}
       <div className="flex-1 overflow-auto px-5 py-4">
         {tab === "overview" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* ai summary */}
             <Section title="AI Summary" icon={<Sparkles size={11} />}>
-              <div className="bg-[#fafafa] border-l-2 border-l-sgi rounded-r-md py-3 px-3.5">
-                <p className="text-[13px] text-[#444] leading-relaxed">{c.aiSummary}</p>
+              <div className="bg-[#fafafa] border-l-2 border-l-sgi rounded-r-md py-2.5 px-3">
+                <p className="text-[13px] text-[#444] leading-snug">{c.aiSummary}</p>
               </div>
             </Section>
 
-            {/* contact */}
+            {/* contact + details — compact 2-column grid */}
             <Section title="Contact">
-              <div className="space-y-2">
-                <Row icon={<Mail size={13} />}>
-                  <a href={`mailto:${c.email}`} className="text-sgi hover:underline">{c.email}</a>
-                </Row>
-                <Row icon={<Phone size={13} />}>
-                  <a href={`tel:${c.phone}`} className="hover:text-sgi">{c.phone}</a>
-                </Row>
-                <Row icon={<MapPin size={13} />}>{c.location}</Row>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                <div className="col-span-2">
+                  <Detail label="Email"><a href={`mailto:${c.email}`} className="text-sgi hover:underline">{c.email}</a></Detail>
+                </div>
+                <Detail label="Phone"><a href={`tel:${c.phone}`} className="hover:text-sgi">{c.phone}</a></Detail>
+                <Detail label="Location">{c.location}</Detail>
+                <Detail label="Salary"><span className="font-medium tabular-nums">{c.desiredSalary}</span></Detail>
+                <Detail label="Applied">{fmtDate(c.applied)}</Detail>
+                <Detail label="Hiring Mgr">{c.hiringManager}</Detail>
+                <Detail label="Recruiter">{c.recruiter}</Detail>
+                <div className="col-span-2">
+                  <Detail label="Source">
+                    <span className={`inline-block text-[11px] font-medium px-1.5 py-px rounded-full ${SOURCE_CLS[c.appliedVia] || "bg-[#f5f5f5] text-[#666]"}`}>
+                      {c.appliedVia}
+                    </span>
+                  </Detail>
+                </div>
               </div>
             </Section>
 
             {/* applied locations */}
             {c.appliedLocations && c.appliedLocations.length > 0 && (
               <Section title="Applied Locations">
-                <ul className="space-y-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {c.appliedLocations.map((loc) => (
-                    <li key={loc} className="flex items-center gap-2 text-[13px] text-[#4A5568]">
-                      <span className="w-1 h-1 rounded-full bg-[#cbd5e0] shrink-0" />
+                    <span key={loc} className="text-[11px] text-[#475569] bg-[#F1F5F9] px-2 py-[2px] rounded">
                       {loc}
-                    </li>
+                    </span>
                   ))}
-                </ul>
+                </div>
               </Section>
             )}
 
             {/* knockout + screening questions */}
             <ScreeningQsContent c={c} />
-
-            {/* work history */}
-            <Section title="Work History">
-              <ol className="space-y-3">
-                {c.experience.map((e, i) => (
-                  <li key={i} className="flex gap-3">
-                    <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${i === 0 ? "bg-sgi" : "bg-[#cbd5e0]"}`} />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-[13px] text-[#1a1a1a]">{e.company}</span>
-                        <span className={`text-[9px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded ${
-                          i === 0 ? "bg-sgi-50 text-sgi" : "bg-[#f2f2f2] text-[#888]"
-                        }`}>
-                          {i === 0 ? "Current" : "Previous"}
-                        </span>
-                      </div>
-                      <div className="text-[12px] text-[#6B7280]">{e.role}</div>
-                      <div className="text-[11px] text-[#9aa5b1]">{e.years}</div>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </Section>
           </div>
         )}
 
@@ -1172,22 +1265,30 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
       {/* actions */}
       <div className="border-t border-[#f0f0f0] px-5 py-4">
         {ADVANCE_DRAWER[c.status] && (
-          <>
+          <div className="flex items-center gap-2">
             <button
               onClick={onAdvance}
-              className="w-full h-9 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
+              className="flex-1 h-9 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
             >
               {ADVANCE_DRAWER[c.status]}
             </button>
-            <div className="flex items-center justify-center mt-2.5 text-[12px]">
-              <button onClick={onRequestDecline} className="text-red-600 hover:underline">Decline</button>
-            </div>
-          </>
+            <button
+              onClick={onRequestDecline}
+              className="h-9 px-4 rounded-md border border-[#FECACA] bg-white text-[#DC2626] text-[13px] font-medium hover:bg-[#FEF2F2] transition"
+            >
+              Decline
+            </button>
+          </div>
         )}
         {c.status === "Offer" && (
-          <div className="flex items-center justify-center gap-4 text-[12px]">
+          <div className="flex items-center justify-between text-[12px]">
             <span className="text-[#9aa5b1]">Offer Sent</span>
-            <button onClick={onRequestDecline} className="text-red-600 hover:underline">Decline</button>
+            <button
+              onClick={onRequestDecline}
+              className="h-9 px-4 rounded-md border border-[#FECACA] bg-white text-[#DC2626] text-[13px] font-medium hover:bg-[#FEF2F2] transition"
+            >
+              Decline
+            </button>
           </div>
         )}
         {c.status === "Declined" && (
@@ -1377,6 +1478,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
           <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-md ${stage.cls}`}>
             {stage.label}
           </span>
+          <SocialLinks links={c.links} />
         </div>
 
         <div className="flex items-center gap-2 px-4">
@@ -1434,7 +1536,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
           {/* scroll content */}
           <div className="flex-1 overflow-auto px-5 py-4 min-h-0">
             {tab === "overview" && (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md tabular-nums ${mb.cls}`}>
                     {mb.text === "—" ? "No match" : `${mb.text} match`}
@@ -1447,59 +1549,45 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
                 <div className="border-t border-[#f0f0f0]" />
 
                 <Section title="AI Summary" icon={<Sparkles size={11} />}>
-                  <div className="bg-[#fafafa] border-l-2 border-l-sgi rounded-r-md py-3 px-3.5">
-                    <p className="text-[13px] text-[#444] leading-relaxed">{c.aiSummary}</p>
+                  <div className="bg-[#fafafa] border-l-2 border-l-sgi rounded-r-md py-2.5 px-3">
+                    <p className="text-[13px] text-[#444] leading-snug">{c.aiSummary}</p>
                   </div>
                 </Section>
 
                 <Section title="Contact">
-                  <div className="space-y-2">
-                    <Row icon={<Mail size={13} />}>
-                      <a href={`mailto:${c.email}`} className="text-sgi hover:underline">{c.email}</a>
-                    </Row>
-                    <Row icon={<Phone size={13} />}>
-                      <a href={`tel:${c.phone}`} className="hover:text-sgi">{c.phone}</a>
-                    </Row>
-                    <Row icon={<MapPin size={13} />}>{c.location}</Row>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div className="col-span-2">
+                      <Detail label="Email"><a href={`mailto:${c.email}`} className="text-sgi hover:underline">{c.email}</a></Detail>
+                    </div>
+                    <Detail label="Phone"><a href={`tel:${c.phone}`} className="hover:text-sgi">{c.phone}</a></Detail>
+                    <Detail label="Location">{c.location}</Detail>
+                    <Detail label="Salary"><span className="font-medium tabular-nums">{c.desiredSalary}</span></Detail>
+                    <Detail label="Applied">{fmtDate(c.applied)}</Detail>
+                    <Detail label="Hiring Mgr">{c.hiringManager}</Detail>
+                    <Detail label="Recruiter">{c.recruiter}</Detail>
+                    <div className="col-span-2">
+                      <Detail label="Source">
+                        <span className={`inline-block text-[11px] font-medium px-1.5 py-px rounded-full ${SOURCE_CLS[c.appliedVia] || "bg-[#f5f5f5] text-[#666]"}`}>
+                          {c.appliedVia}
+                        </span>
+                      </Detail>
+                    </div>
                   </div>
                 </Section>
 
                 {c.appliedLocations && c.appliedLocations.length > 0 && (
                   <Section title="Applied Locations">
-                    <ul className="space-y-1.5">
+                    <div className="flex flex-wrap gap-1.5">
                       {c.appliedLocations.map((loc) => (
-                        <li key={loc} className="flex items-center gap-2 text-[13px] text-[#4A5568]">
-                          <span className="w-1 h-1 rounded-full bg-[#cbd5e0] shrink-0" />
+                        <span key={loc} className="text-[11px] text-[#475569] bg-[#F1F5F9] px-2 py-[2px] rounded">
                           {loc}
-                        </li>
+                        </span>
                       ))}
-                    </ul>
+                    </div>
                   </Section>
                 )}
 
                 <ScreeningQsContent c={c} />
-
-                <Section title="Work History">
-                  <ol className="space-y-3">
-                    {c.experience.map((e, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${i === 0 ? "bg-sgi" : "bg-[#cbd5e0]"}`} />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-[13px] text-[#1a1a1a]">{e.company}</span>
-                            <span className={`text-[9px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded ${
-                              i === 0 ? "bg-sgi-50 text-sgi" : "bg-[#f2f2f2] text-[#888]"
-                            }`}>
-                              {i === 0 ? "Current" : "Previous"}
-                            </span>
-                          </div>
-                          <div className="text-[12px] text-[#6B7280]">{e.role}</div>
-                          <div className="text-[11px] text-[#9aa5b1]">{e.years}</div>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                </Section>
               </div>
             )}
 
@@ -1509,24 +1597,30 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
           {/* bottom fixed actions */}
           <div className="border-t border-[#f0f0f0] px-5 py-4 shrink-0">
             {ADVANCE_DRAWER[c.status] && (
-              <>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => onAdvance(c.id)}
-                  className="w-full h-9 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
+                  className="flex-1 h-9 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
                 >
                   {ADVANCE_DRAWER[c.status]}
                 </button>
-                <div className="flex items-center justify-center mt-2.5">
-                  <button onClick={() => onDecline(c)} className="text-[12px] text-red-600 hover:underline">
-                    Decline
-                  </button>
-                </div>
-              </>
+                <button
+                  onClick={() => onDecline(c)}
+                  className="h-9 px-4 rounded-md border border-[#FECACA] bg-white text-[#DC2626] text-[13px] font-medium hover:bg-[#FEF2F2] transition"
+                >
+                  Decline
+                </button>
+              </div>
             )}
             {c.status === "Offer" && (
-              <div className="flex items-center justify-center gap-4 text-[12px]">
+              <div className="flex items-center justify-between text-[12px]">
                 <span className="text-[#9aa5b1]">Offer Sent</span>
-                <button onClick={() => onDecline(c)} className="text-red-600 hover:underline">Decline</button>
+                <button
+                  onClick={() => onDecline(c)}
+                  className="h-9 px-4 rounded-md border border-[#FECACA] bg-white text-[#DC2626] text-[13px] font-medium hover:bg-[#FEF2F2] transition"
+                >
+                  Decline
+                </button>
               </div>
             )}
             {c.status === "Declined" && (
@@ -1661,7 +1755,7 @@ function FilterHead({ label, children }) {
   );
 }
 
-function ColumnFilter({ id, openFilter, setOpenFilter, options, applied, onApply, showBadge = false }) {
+function ColumnFilter({ id, openFilter, setOpenFilter, options, applied, onApply, showBadge = false, forceActive = false }) {
   const ref = useRef(null);
   const open = openFilter === id;
   const [alignRight, setAlignRight] = useState(false);
@@ -1686,7 +1780,7 @@ function ColumnFilter({ id, openFilter, setOpenFilter, options, applied, onApply
 
   useOutside(ref, open, () => setOpenFilter(null));
 
-  const active = applied.size > 0;
+  const active = applied.size > 0 || forceActive;
   const toggle = (v) =>
     setDraft((prev) => {
       const n = new Set(prev);
@@ -1795,7 +1889,9 @@ function PageBtn({ children, disabled, onClick }) {
   );
 }
 
-function ReqOption({ active, onClick, label, count }) {
+function ReqOption({ active, onClick, label, count, sync }) {
+  const syncDot =
+    sync === "Synced" ? "bg-green-500" : sync === "Pending" ? "bg-orange-400" : "bg-[#cbd5e0]";
   return (
     <button
       onClick={onClick}
@@ -1807,7 +1903,10 @@ function ReqOption({ active, onClick, label, count }) {
         <span className={active ? "font-semibold" : "font-medium"}>{label}</span>{" "}
         <span className="text-[#9aa5b1] font-normal">({count})</span>
       </span>
-      {active && <Check size={14} className="text-sgi shrink-0" />}
+      <span className="flex items-center gap-2 shrink-0">
+        {sync && <span className={`w-2 h-2 rounded-full ${syncDot}`} title={`ADP: ${sync}`} />}
+        {active && <Check size={14} className="text-sgi" />}
+      </span>
     </button>
   );
 }
@@ -1815,21 +1914,12 @@ function ReqOption({ active, onClick, label, count }) {
 function Section({ title, icon, children }) {
   return (
     <section>
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[#999] font-semibold mb-2.5">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-[#94A3B8] font-semibold mb-1.5">
         {icon}
         {title}
       </div>
       {children}
     </section>
-  );
-}
-
-function Row({ icon, children }) {
-  return (
-    <div className="flex items-center gap-2 text-[13px] text-[#4A5568]">
-      <span className="text-[#9aa5b1] shrink-0">{icon}</span>
-      {children}
-    </div>
   );
 }
 
@@ -1847,11 +1937,46 @@ function IntExtBadge({ internal }) {
   );
 }
 
+function Detail({ label, children }) {
+  return (
+    <div className="min-w-0 leading-tight">
+      <div className="text-[10px] uppercase tracking-[0.06em] text-[#94A3B8]">{label}</div>
+      <div className="text-[13px] text-[#1a1a1a] truncate">{children}</div>
+    </div>
+  );
+}
+
+function GitHubIcon({ size = 14, className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.79 2.73 1.27 3.4.97.11-.75.41-1.27.74-1.56-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.25 5.69.42.36.8 1.08.8 2.18v3.23c0 .31.21.68.8.56C20.71 21.39 24 17.08 24 12 24 5.73 18.77.5 12.5.5z" />
+    </svg>
+  );
+}
+
 function LinkedInIcon({ size = 14, className = "" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
       <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zM8.34 18.34V9.99H5.67v8.35h2.67zM7 8.8a1.55 1.55 0 1 0 0-3.1 1.55 1.55 0 0 0 0 3.1zm11.34 9.54v-4.58c0-2.45-1.31-3.59-3.06-3.59-1.41 0-2.04.78-2.39 1.32v-1.13h-2.67c.04.75 0 8.35 0 8.35h2.67v-4.66c0-.24.02-.48.09-.65.19-.48.63-.98 1.36-.98.96 0 1.34.73 1.34 1.8v4.49h2.66z" />
     </svg>
+  );
+}
+
+function SocialLinks({ links }) {
+  const lk = links || {};
+  const cls = (on) => `shrink-0 ${on ? "opacity-75 hover:opacity-100 cursor-pointer transition" : "opacity-[0.35] cursor-default"}`;
+  return (
+    <span className="flex items-center gap-1 shrink-0">
+      <button disabled={!lk.linkedin} onClick={(e) => e.stopPropagation()} title="LinkedIn" className={cls(lk.linkedin)}>
+        <LinkedInIcon size={13} className="text-[#0A66C2]" />
+      </button>
+      <button disabled={!lk.github} onClick={(e) => e.stopPropagation()} title="GitHub" className={cls(lk.github)}>
+        <GitHubIcon size={13} className="text-[#24292E]" />
+      </button>
+      <button disabled={!lk.portfolio} onClick={(e) => e.stopPropagation()} title="Portfolio" className={cls(lk.portfolio)}>
+        <Globe size={13} className="text-[#023E8A]" />
+      </button>
+    </span>
   );
 }
 
@@ -1884,6 +2009,75 @@ function SelectAll({ ids, selectedIds, setSelectedIds }) {
       className="minicheck"
       aria-label="Select all"
     />
+  );
+}
+
+/* =========================== upload modal =============================== */
+
+function UploadModal({ mode, onClose, showToast }) {
+  const bulk = mode === "bulk";
+  const [files, setFiles] = useState([]);
+  const setPicked = (list) => setFiles(bulk ? [...list] : list.length ? [list[0]] : []);
+
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div onClick={onClose} className="fixed inset-0 z-[70] bg-black/40 grid place-items-center px-4">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-[420px] max-w-full bg-white rounded-[12px] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)] p-6"
+      >
+        <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]" aria-label="Close">
+          <X size={16} />
+        </button>
+        <h3 className="text-[15px] font-semibold text-[#1a1a1a] mb-4">
+          {bulk ? "Bulk Upload" : "Single Resume Upload"}
+        </h3>
+
+        <label
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); setPicked(e.dataTransfer.files); }}
+          className="block border-2 border-dashed border-[#E2E8F0] rounded-md p-6 text-center cursor-pointer hover:border-sgi hover:bg-[#F8FAFC] transition"
+        >
+          <input type="file" multiple={bulk} className="hidden" onChange={(e) => setPicked(e.target.files)} />
+          <UploadCloud size={26} className="mx-auto text-sgi" />
+          <div className="text-[13px] text-[#1a1a1a] mt-2">
+            {bulk
+              ? files.length > 0 ? `${files.length} file${files.length === 1 ? "" : "s"} selected` : "Drag & drop resumes here"
+              : files.length > 0 ? files[0].name : "Drag & drop a resume here"}
+          </div>
+          <div className="text-[11px] text-[#94A3B8] mt-1">
+            {bulk ? "or click to browse · multiple files" : "or click to browse · Supports PDF, DOC, DOCX (max 10MB)"}
+          </div>
+        </label>
+
+        {bulk && files.length > 0 && (
+          <ul className="mt-3 max-h-32 overflow-auto space-y-1">
+            {files.map((f, i) => (
+              <li key={i} className="flex items-center gap-2 text-[12px] text-[#4A5568] bg-[#F8FAFC] border border-[#E2E8F0] rounded px-2 py-1">
+                <FileText size={12} className="text-sgi shrink-0" />
+                <span className="truncate">{f.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          disabled={files.length === 0}
+          onClick={() => {
+            showToast(bulk ? `Uploading ${files.length} resumes` : `Uploading ${files[0].name}`);
+            onClose();
+          }}
+          className="mt-4 w-full h-9 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition disabled:opacity-40"
+        >
+          {bulk ? `Upload ${files.length || ""} Resume${files.length === 1 ? "" : "s"}` : "Upload Resume"}
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -3,8 +3,6 @@ import { NavLink, Outlet } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
-  Briefcase,
-  Upload,
   BarChart3,
   PanelLeftClose,
   PanelLeft,
@@ -13,8 +11,6 @@ import {
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/screening", label: "Screening", icon: Users },
-  { to: "/requisitions", label: "Requisitions", icon: Briefcase },
-  { to: "/upload", label: "Upload Resumes", icon: Upload },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 

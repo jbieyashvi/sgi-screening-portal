@@ -155,6 +155,15 @@ const buildScreeningQuestions = (o, seed) => {
 const HIRING_MANAGERS = ["Jeri Hunnell", "Jeri Hunnell", "Jeri Hunnell", "Marcus Johnson", "Sarah Williams", "David Chen"];
 const RECRUITERS = ["Spencer Strobel", "Spencer Strobel", "Spencer Strobel", "John Marie", "Candace W."];
 
+// social/profile links per candidate (demo). Default: LinkedIn only.
+const LINKS_BY_NAME = {
+  "Mason Coleman": { linkedin: true, github: true, portfolio: true },
+  "Marcus Reid": { linkedin: true, github: true, portfolio: true },
+  "Wyatt Hamilton": { linkedin: true, github: false, portfolio: false },
+  "Charlotte Harrison": { linkedin: true, github: false, portfolio: true },
+};
+const defaultLinks = { linkedin: true, github: false, portfolio: false };
+
 // Helper: build a candidate with sensible defaults
 const make = (o) => {
   const seed = hashStr(o.id || o.name || "x");
@@ -175,6 +184,7 @@ const make = (o) => {
   screeningQuestions: buildScreeningQuestions(o, seed),
   hiringManager: HIRING_MANAGERS[seed % HIRING_MANAGERS.length],
   recruiter: RECRUITERS[seed % RECRUITERS.length],
+  links: LINKS_BY_NAME[o.name] || defaultLinks,
   ...o,
   activity: o.activity || [
     { date: o.applied, text: "Applied via ADP" },
