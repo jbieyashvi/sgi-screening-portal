@@ -80,6 +80,7 @@ function Stat({ label, value, color }) {
 function UsersTab({ showToast }) {
   const [users, setUsers] = useState(SEED_USERS);
   const [invite, setInvite] = useState(false);
+  const [editUser, setEditUser] = useState(null);
   const active = users.filter((u) => u.active).length;
 
   const del = (email) => setUsers((u) => u.filter((x) => x.email !== email));
@@ -148,7 +149,7 @@ function UsersTab({ showToast }) {
                   )}
                 </td>
                 <td className="px-3 py-3 pr-5 text-right whitespace-nowrap">
-                  <button onClick={() => showToast(`Editing ${u.name}`)} className="p-1 rounded text-[#6B7280] hover:text-sgi hover:bg-sgi-50 transition mr-1" title="Edit">
+                  <button onClick={() => setEditUser(u)} className="p-1 rounded text-[#6B7280] hover:text-sgi hover:bg-sgi-50 transition mr-1" title="Edit">
                     <Pencil size={14} />
                   </button>
                   <button onClick={() => { del(u.email); showToast(`${u.name} removed`); }} className="p-1 rounded text-[#DC2626] hover:bg-red-50 transition" title="Delete">
@@ -162,6 +163,17 @@ function UsersTab({ showToast }) {
       </div>
 
       {invite && <InviteModal onClose={() => setInvite(false)} showToast={showToast} />}
+      {editUser && (
+        <EditUserDrawer
+          user={editUser}
+          onClose={() => setEditUser(null)}
+          onSave={(patch) => {
+            setUsers((us) => us.map((x) => (x.email === editUser.email ? { ...x, ...patch } : x)));
+            showToast(`${editUser.name} updated`);
+            setEditUser(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -200,18 +212,148 @@ function InviteModal({ onClose, showToast }) {
   );
 }
 
+function Switch({ on }) {
+  return (
+    <span className={`relative w-8 h-[18px] rounded-full transition shrink-0 ${on ? "bg-[#023E8A]" : "bg-slate-300"}`}>
+      <span className={`absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white transition-all ${on ? "left-[16px]" : "left-[2px]"}`} />
+    </span>
+  );
+}
+
+/* --------------------------- edit user drawer --------------------------- */
+
+const PERM_LIST = [
+  { label: "View Candidates", key: "View Candidates" },
+  { label: "Accept / Reject Candidates", key: "Accept/Reject" },
+  { label: "Upload Resumes", key: "Upload Resumes" },
+  { label: "Use Ask AI", key: "Use Ask AI" },
+  { label: "View Analytics", key: "View Analytics" },
+  { label: "Manage Users", key: "Manage Users" },
+  { label: "Sync ADP", key: "Sync ADP" },
+];
+
+const permsForRole = (role) =>
+  PERM_LIST.reduce((m, p) => ({ ...m, [p.key]: (PERM_MATRIX[role]?.[p.key] ?? "No Access") !== "No Access" }), {});
+
+function EditUserDrawer({ user, onClose, onSave }) {
+  const [name, setName] = useState(user.name);
+  const [role, setRole] = useState(user.role);
+  const [active, setActive] = useState(user.active);
+  const [perms, setPerms] = useState(() => permsForRole(user.role));
+
+  const changeRole = (r) => { setRole(r); setPerms(permsForRole(r)); };
+  const toggle = (key) => setPerms((m) => ({ ...m, [key]: !m[key] }));
+
+  return (
+    <div className="fixed inset-0 z-[60]">
+      <div onClick={onClose} className="absolute inset-0 bg-black/20" />
+      <aside className="absolute right-0 top-0 h-full w-[380px] bg-white border-l border-[#ececec] shadow-[-8px_0_30px_-12px_rgba(0,0,0,0.2)] flex flex-col">
+        {/* header */}
+        <div className="px-5 pt-5 pb-4 border-b border-[#f0f0f0] relative">
+          <button onClick={onClose} className="absolute top-3 right-3 p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5]" aria-label="Close">
+            <X size={16} />
+          </button>
+          <div className="flex flex-col items-center text-center">
+            <span className={`w-12 h-12 rounded-full grid place-items-center text-[15px] font-semibold ${user.color}`}>
+              {initials(user.name)}
+            </span>
+            <h2 className="text-[16px] font-bold text-[#1a1a1a] mt-2">{name}</h2>
+            <span className="inline-block mt-1.5 text-[11px] font-medium px-2 py-[3px] rounded-full bg-[#EFF6FF] border border-[#BFDBFE] text-[#023E8A]">
+              {role}
+            </span>
+          </div>
+        </div>
+
+        {/* body */}
+        <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-1">Full Name</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full h-9 px-3 border border-[#E2E8F0] rounded-md text-[13px] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2,62,138,0.1)]"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-1">Email</label>
+            <input
+              value={user.email}
+              disabled
+              className="w-full h-9 px-3 border border-[#E2E8F0] rounded-md text-[13px] bg-[#F8FAFC] text-[#94A3B8] cursor-not-allowed"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-1">Role</label>
+            <select
+              value={role}
+              onChange={(e) => changeRole(e.target.value)}
+              className="w-full h-9 px-3 border border-[#E2E8F0] rounded-md text-[13px] bg-white focus:outline-none focus:border-sgi-400"
+            >
+              {ROLE_OPTIONS.map((r) => (<option key={r} value={r}>{r}</option>))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-1">Status</label>
+            <button onClick={() => setActive((a) => !a)} className="inline-flex items-center gap-2">
+              <Switch on={active} />
+              <span className={`text-[13px] ${active ? "text-slate-700" : "text-slate-400"}`}>{active ? "Active" : "Inactive"}</span>
+            </button>
+          </div>
+
+          <div className="pt-1">
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-2.5">Permissions</div>
+            <div className="space-y-2.5">
+              {PERM_LIST.map((p) => (
+                <button key={p.key} onClick={() => toggle(p.key)} className="w-full flex items-center justify-between gap-3 text-[13px] text-[#1a1a1a]">
+                  <span>{p.label}</span>
+                  <Switch on={!!perms[p.key]} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* footer */}
+        <div className="border-t border-[#f0f0f0] px-5 py-4">
+          <button
+            onClick={() => onSave({ name, role, active })}
+            className="w-full h-9 rounded-md bg-[#023E8A] text-white text-[13px] font-medium hover:bg-[#1A5EBF] transition"
+          >
+            Save Changes
+          </button>
+          <div className="text-center mt-2.5">
+            <button onClick={onClose} className="text-[12px] text-[#6B7280] hover:underline">Cancel</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 /* -------------------------------- Roles --------------------------------- */
 
 function RolesTab({ showToast }) {
   const [roles, setRoles] = useState(ROLES);
+  const [drawer, setDrawer] = useState(null); // { mode:"add" } | { mode:"edit", role }
   const del = (name) => setRoles((r) => r.filter((x) => x.name !== name));
+
+  const save = (patch) => {
+    if (drawer.mode === "add") {
+      setRoles((r) => [...r, { name: patch.name || "New Role", desc: patch.desc, users: 0 }]);
+      showToast(`${patch.name || "New role"} created`);
+    } else {
+      setRoles((r) => r.map((x) => (x.name === drawer.role.name ? { ...x, name: patch.name, desc: patch.desc } : x)));
+      showToast(`${patch.name} role updated`);
+    }
+    setDrawer(null);
+  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <Stat label="Total Roles" value={roles.length} color="text-slate-900" />
         <button
-          onClick={() => showToast("Add Role form coming soon")}
+          onClick={() => setDrawer({ mode: "add" })}
           className="h-8 px-3.5 inline-flex items-center gap-1.5 bg-[#023E8A] text-white rounded-md text-[13px] font-medium hover:bg-[#1A5EBF] transition"
         >
           <Plus size={14} /> Add Role
@@ -235,7 +377,7 @@ function RolesTab({ showToast }) {
                   {r.desc} <span className="text-slate-400">· {r.users} user{r.users === 1 ? "" : "s"}</span>
                 </td>
                 <td className="px-3 py-3 pr-5 text-right whitespace-nowrap">
-                  <button onClick={() => showToast(`Editing ${r.name} role`)} className="p-1 rounded text-[#6B7280] hover:text-sgi hover:bg-sgi-50 transition mr-1" title="Edit">
+                  <button onClick={() => setDrawer({ mode: "edit", role: r })} className="p-1 rounded text-[#6B7280] hover:text-sgi hover:bg-sgi-50 transition mr-1" title="Edit">
                     <Pencil size={14} />
                   </button>
                   <button onClick={() => { del(r.name); showToast(`${r.name} role removed`); }} className="p-1 rounded text-[#DC2626] hover:bg-red-50 transition" title="Delete">
@@ -247,6 +389,83 @@ function RolesTab({ showToast }) {
           </tbody>
         </table>
       </div>
+
+      {drawer && <RoleDrawer mode={drawer.mode} role={drawer.role} onClose={() => setDrawer(null)} onSave={save} />}
+    </div>
+  );
+}
+
+function RoleDrawer({ mode, role, onClose, onSave }) {
+  const add = mode === "add";
+  const [name, setName] = useState(add ? "" : role.name);
+  const [desc, setDesc] = useState(add ? "" : role.desc);
+  const [perms, setPerms] = useState(() =>
+    add ? PERM_LIST.reduce((m, p) => ({ ...m, [p.key]: false }), {}) : permsForRole(role.name)
+  );
+  const toggle = (key) => setPerms((m) => ({ ...m, [key]: !m[key] }));
+
+  return (
+    <div className="fixed inset-0 z-[60]">
+      <div className="absolute inset-0 bg-black/20" />
+      <aside className="absolute right-0 top-0 h-full w-[380px] bg-white border-l border-[#ececec] shadow-[-8px_0_30px_-12px_rgba(0,0,0,0.2)] flex flex-col">
+        <div className="px-5 pt-5 pb-4 border-b border-[#f0f0f0] relative">
+          <button onClick={onClose} className="absolute top-3 right-3 p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5]" aria-label="Close">
+            <X size={16} />
+          </button>
+          <h2 className="text-[16px] font-bold text-[#1a1a1a]">{add ? "Add New Role" : name || role.name}</h2>
+          {!add && <p className="text-[12px] text-[#6B7280] mt-0.5">Edit Role</p>}
+        </div>
+
+        <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-1">Role Name</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Sourcer"
+              className="w-full h-9 px-3 border border-[#E2E8F0] rounded-md text-[13px] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2,62,138,0.1)]"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-1">Description</label>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              placeholder="What can this role do?"
+              className="w-full min-h-[72px] p-3 border border-[#E2E8F0] rounded-md text-[13px] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2,62,138,0.1)]"
+            />
+          </div>
+          {!add && (
+            <div className="text-[12px] text-[#6B7280]">
+              {role.users} user{role.users === 1 ? "" : "s"} assigned to this role
+            </div>
+          )}
+
+          <div className="pt-1">
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-2.5">Permissions</div>
+            <div className="space-y-2.5">
+              {PERM_LIST.map((p) => (
+                <button key={p.key} onClick={() => toggle(p.key)} className="w-full flex items-center justify-between gap-3 text-[13px] text-[#1a1a1a]">
+                  <span>{p.label}</span>
+                  <Switch on={!!perms[p.key]} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[#f0f0f0] px-5 py-4">
+          <button
+            onClick={() => onSave({ name, desc })}
+            className="w-full h-9 rounded-md bg-[#023E8A] text-white text-[13px] font-medium hover:bg-[#1A5EBF] transition"
+          >
+            {add ? "Create Role" : "Save Changes"}
+          </button>
+          <div className="text-center mt-2.5">
+            <button onClick={onClose} className="text-[12px] text-[#6B7280] hover:underline">Cancel</button>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
