@@ -164,6 +164,17 @@ const LINKS_BY_NAME = {
 };
 const defaultLinks = { linkedin: true, github: false, portfolio: false };
 
+// simplified stage model
+const STATUS_MAP = {
+  "To Review": "In Progress",
+  Screening: "In Progress",
+  Interview: "In Progress",
+  Offer: "Accepted",
+  Hired: "Accepted",
+  Declined: "Rejected",
+  "Knocked Out": "Knocked Out",
+};
+
 // Helper: build a candidate with sensible defaults
 const make = (o) => {
   const seed = hashStr(o.id || o.name || "x");
@@ -186,6 +197,8 @@ const make = (o) => {
   recruiter: RECRUITERS[seed % RECRUITERS.length],
   links: LINKS_BY_NAME[o.name] || defaultLinks,
   ...o,
+  // normalize stage to the simplified model
+  status: STATUS_MAP[o.status] || o.status || "In Progress",
   activity: o.activity || [
     { date: o.applied, text: "Applied via ADP" },
     {

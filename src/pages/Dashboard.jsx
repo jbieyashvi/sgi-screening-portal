@@ -18,10 +18,9 @@ function StatCard({ icon: Icon, label, value, accent }) {
 
 const FUNNEL = [
   { stage: "Applied", count: 1474, pct: null },
-  { stage: "Screened", count: 312, pct: "21.2%" },
-  { stage: "Interview", count: 48, pct: "15.4%" },
-  { stage: "Offer", count: 9, pct: "18.8%" },
-  { stage: "Hired", count: 6, pct: "66.7%" },
+  { stage: "In Progress", count: 48, pct: "3.3%" },
+  { stage: "Knocked Out", count: 312, pct: "21.2%" },
+  { stage: "Rejected", count: 89, pct: "6.0%" },
 ];
 
 const KNOCKOUTS = [

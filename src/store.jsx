@@ -4,11 +4,9 @@ import { candidates as seedCandidates, requisitions } from "./data/mockData";
 
 const AppCtx = createContext(null);
 
-// recruiting pipeline progression
+// recruiting pipeline progression (simplified): In Progress -> Accepted
 const STAGE_FLOW = {
-  "To Review": { next: "Screening", toast: "Moved to Screening" },
-  Screening: { next: "Interview", toast: "Moved to Interview" },
-  Interview: { next: "Offer", toast: "Offer stage initiated" },
+  "In Progress": { next: "Accepted", toast: "Candidate accepted" },
 };
 
 export function AppProvider({ children }) {
@@ -94,17 +92,17 @@ export function AppProvider({ children }) {
           c.id === id
             ? {
                 ...c,
-                status: "To Review",
+                status: "In Progress",
                 activity: [
                   ...c.activity,
-                  { date: new Date().toISOString().slice(0, 10), text: "Restored to To Review by recruiter" },
+                  { date: new Date().toISOString().slice(0, 10), text: "Restored to In Progress by recruiter" },
                 ],
               }
             : c
         )
       );
       const c = candidatesRef.current.find((x) => x.id === id);
-      showToast(`${c ? c.name : "Candidate"} restored to To Review`);
+      showToast(`${c ? c.name : "Candidate"} restored to In Progress`);
     },
     [showToast]
   );
@@ -116,16 +114,16 @@ export function AppProvider({ children }) {
           c.id === id
             ? {
                 ...c,
-                status: "Declined",
+                status: "Rejected",
                 activity: [
                   ...c.activity,
-                  { date: new Date().toISOString().slice(0, 10), text: "Declined by recruiter" },
+                  { date: new Date().toISOString().slice(0, 10), text: "Rejected by recruiter" },
                 ],
               }
             : c
         )
       );
-      showToast("Application declined successfully", "error");
+      showToast("Candidate rejected", "error");
     },
     [showToast]
   );

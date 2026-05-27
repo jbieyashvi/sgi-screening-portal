@@ -5,6 +5,7 @@ import Screening from "./pages/Screening";
 import Requisitions from "./pages/Requisitions";
 import Upload from "./pages/Upload";
 import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 import { AppProvider } from "./store";
 import "./App.css";
 
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/requisitions" element={<Requisitions />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
     </AppProvider>

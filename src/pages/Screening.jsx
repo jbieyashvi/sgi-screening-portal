@@ -27,24 +27,16 @@ import { useApp } from "../store";
 /* ----------------------------- status mapping ---------------------------- */
 
 const STAGE = {
-  "To Review": {
-    label: "To Review",
+  "In Progress": {
+    label: "In Progress",
     cls: "bg-[#F5F0E8] text-[#92400E]",
   },
-  Screening: {
-    label: "Screening",
-    cls: "bg-sgi-50 text-sgi",
-  },
-  Interview: {
-    label: "Interview",
-    cls: "bg-indigo-50 text-indigo-700",
-  },
-  Offer: {
-    label: "Offer",
+  Accepted: {
+    label: "Accepted",
     cls: "bg-[#DCFCE7] text-[#16A34A]",
   },
-  Declined: {
-    label: "Declined",
+  Rejected: {
+    label: "Rejected",
     cls: "bg-[#FEE2E2] text-[#DC2626]",
   },
   "Knocked Out": {
@@ -52,10 +44,6 @@ const STAGE = {
     cls: "bg-[#F1F5F9] text-[#475569]",
   },
 };
-
-// Advance button labels by current stage
-const ADVANCE_TABLE = { "To Review": "To Screen", Screening: "To Interview", Interview: "Send Offer" };
-const ADVANCE_DRAWER = { "To Review": "Advance to Screening", Screening: "Advance to Interview", Interview: "Send Offer" };
 
 const SOURCE_CLS = {
   Indeed: "bg-[#E8F0FB] text-sgi-700 border-sgi-100",
@@ -71,11 +59,9 @@ const SOURCE_FILTER_OPTS = ["Indeed", "LinkedIn", "ZipRecruiter"].map((s) => ({
 
 // stage filter options map back to candidate.status values
 const STAGE_FILTER_OPTS = [
-  { value: "To Review", label: "To Review", cls: STAGE["To Review"].cls },
-  { value: "Screening", label: "Screening", cls: STAGE["Screening"].cls },
-  { value: "Interview", label: "Interview", cls: STAGE["Interview"].cls },
-  { value: "Offer", label: "Offer", cls: STAGE["Offer"].cls },
-  { value: "Declined", label: "Declined", cls: STAGE["Declined"].cls },
+  { value: "In Progress", label: "In Progress", cls: STAGE["In Progress"].cls },
+  { value: "Accepted", label: "Accepted", cls: STAGE["Accepted"].cls },
+  { value: "Rejected", label: "Rejected", cls: STAGE["Rejected"].cls },
   { value: "Knocked Out", label: "Knocked Out", cls: STAGE["Knocked Out"].cls },
 ];
 
@@ -148,17 +134,15 @@ const DEFAULT_HIDDEN = ["requisition", "source", "hiringManager", "recruiter"];
 
 const STAT_CARDS = [
   { key: "all", label: "Total", color: "text-[#1a1a1a]" },
-  { key: "To Review", label: "To Review", color: "text-amber-600" },
-  { key: "Screening", label: "Screening", color: "text-sgi" },
-  { key: "Interview", label: "Interview", color: "text-indigo-600" },
-  { key: "Declined", label: "Declined", color: "text-red-600" },
+  { key: "In Progress", label: "In Progress", color: "text-amber-600" },
   { key: "Knocked Out", label: "Knocked Out", color: "text-[#888]" },
+  { key: "Rejected", label: "Rejected", color: "text-red-600" },
 ];
 
 /* ================================ page =================================== */
 
 export default function Screening() {
-  const { candidates, requisitions, advanceCandidate, setCandidateStage, restoreCandidate, declineCandidate, showToast } =
+  const { candidates, requisitions, advanceCandidate, restoreCandidate, declineCandidate, showToast } =
     useApp();
 
   const [reqFilter, setReqFilter] = useState("REQ-2715");
@@ -202,7 +186,7 @@ export default function Screening() {
   // column filters (applied sets)
   const [srcF, setSrcF] = useState(() => new Set());
   const [locF, setLocF] = useState(() => new Set());
-  const [stageF, setStageF] = useState(() => new Set(["To Review"]));
+  const [stageF, setStageF] = useState(() => new Set(["In Progress"]));
   const [matchF, setMatchF] = useState(() => new Set());
   const [salaryF, setSalaryF] = useState(() => new Set());
   const [openFilter, setOpenFilter] = useState(null); // "source" | "location" | "stage" | "match" | "salary" | null
@@ -254,7 +238,7 @@ export default function Screening() {
   );
 
   const counts = useMemo(() => {
-    const c = { all: reqCandidates.length, "To Review": 0, Screening: 0, Interview: 0, Offer: 0, Declined: 0, "Knocked Out": 0 };
+    const c = { all: reqCandidates.length, "In Progress": 0, Accepted: 0, Rejected: 0, "Knocked Out": 0 };
     reqCandidates.forEach((x) => {
       if (c[x.status] != null) c[x.status] += 1;
     });
@@ -290,7 +274,7 @@ export default function Screening() {
   );
 
   const rank = (s) =>
-    ({ Offer: 0, Interview: 1, Screening: 2, "To Review": 3, Declined: 4, "Knocked Out": 5 }[s] ?? 3);
+    ({ Accepted: 0, "In Progress": 1, Rejected: 2, "Knocked Out": 3 }[s] ?? 1);
 
   const sorted = useMemo(
     () =>
@@ -807,34 +791,26 @@ export default function Screening() {
                   {/* actions */}
                   <Td>
                     <div className="flex items-center justify-center gap-1.5">
-                      {ADVANCE_TABLE[c.status] && (
+                      {c.status === "In Progress" && (
                         <>
                           <button
                             onClick={(e) => { e.stopPropagation(); advanceCandidate(c.id); }}
-                            className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#E8F0FB] text-[#023E8A] hover:bg-[#d8e6f8] transition"
+                            className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#DCFCE7] text-[#16A34A] hover:bg-[#c5f5d3] transition"
                           >
-                            {ADVANCE_TABLE[c.status]}
+                            Accept
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeclineTarget(c); }}
                             className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#FEE2E2] text-[#DC2626] hover:bg-[#fcd0d0] transition"
                           >
-                            Decline
+                            Reject
                           </button>
                         </>
                       )}
-                      {c.status === "Offer" && (
-                        <>
-                          <span className="text-[11px] text-[#9aa5b1]">Offer Sent</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDeclineTarget(c); }}
-                            className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#FEE2E2] text-[#DC2626] hover:bg-[#fcd0d0] transition"
-                          >
-                            Decline
-                          </button>
-                        </>
+                      {c.status === "Accepted" && (
+                        <span className="text-[11px] text-[#16A34A] font-medium">Accepted</span>
                       )}
-                      {c.status === "Declined" && (
+                      {c.status === "Rejected" && (
                         <button
                           onClick={(e) => { e.stopPropagation(); restoreCandidate(c.id); }}
                           className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#E8F0FB] text-[#023E8A] hover:bg-[#d8e6f8] transition"
@@ -907,24 +883,25 @@ export default function Screening() {
                 <ChevronDown size={14} className={`transition-transform ${bulkAdvOpen ? "rotate-180" : ""}`} />
               </button>
               {bulkAdvOpen && (
-                <div className="absolute right-0 bottom-full mb-1.5 z-40 w-[200px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.12)] py-1.5">
+                <div className="absolute right-0 bottom-full mb-1.5 z-40 w-[240px] bg-white border border-[#E2E8F0] rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.12)] py-1.5">
                   {[
-                    { stage: "Screening", label: "Move to Screening" },
-                    { stage: "Interview", label: "Move to Interview" },
-                    { stage: "Offer", label: "Move to Offer" },
-                  ].map((o) => (
+                    "Advance to Screening Stage",
+                    "Mark for Hiring Manager Review",
+                    "Advance to Interview Stage",
+                    "Advance to Offer Stage",
+                    "Advance to Pre-Hire Stage",
+                  ].map((label) => (
                     <button
-                      key={o.stage}
+                      key={label}
                       onClick={() => {
                         const n = selectedIds.size;
-                        selectedIds.forEach((id) => setCandidateStage(id, o.stage));
                         setSelectedIds(new Set());
                         setBulkAdvOpen(false);
-                        showToast(`${n} candidate${n === 1 ? "" : "s"} moved to ${o.stage}`);
+                        showToast(`${n} candidate${n === 1 ? "" : "s"} — ${label}`);
                       }}
-                      className="block w-full text-left text-[13px] text-[#1a1a1a] px-4 py-2 hover:bg-[#E8F0FB]"
+                      className="block w-full text-left text-[13px] text-[#1a1a1a] px-4 py-2 hover:bg-[#F8FAFC] transition"
                     >
-                      {o.label}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -934,7 +911,7 @@ export default function Screening() {
               onClick={() => setBulkDecline(true)}
               className="h-8 px-3.5 rounded-md bg-white border border-[#DC2626] text-[#DC2626] text-[13px] font-medium hover:bg-red-50 transition"
             >
-              Decline Selected
+              Reject Selected
             </button>
           </div>
         </div>
@@ -1106,10 +1083,10 @@ export default function Screening() {
       if (/\bsql\b|python|tableau|looker|analytics|\bdata\b|excel|snowflake/.test(q)) add("SKILLS", "SQL & Python", (c) => c.sql === "Advanced");
 
       // STAGE
-      if (/screening/.test(q)) add("STAGE", "Screening", (c) => c.status === "Screening");
-      if (/to review|\breview\b/.test(q)) add("STAGE", "To Review", (c) => c.status === "To Review");
-      if (/interview/.test(q)) add("STAGE", "Interview", (c) => c.status === "Interview");
-      if (/declin/.test(q)) add("STAGE", "Declined", (c) => c.status === "Declined");
+      if (/in progress|screening|\breview\b|to review|interview/.test(q)) add("STAGE", "In Progress", (c) => c.status === "In Progress");
+      if (/accept/.test(q)) add("STAGE", "Accepted", (c) => c.status === "Accepted");
+      if (/reject|declin/.test(q)) add("STAGE", "Rejected", (c) => c.status === "Rejected");
+      if (/knock/.test(q)) add("STAGE", "Knocked Out", (c) => c.status === "Knocked Out");
 
       // WORK TYPE
       if (/hybrid/.test(q)) add("WORK TYPE", "Hybrid", (c) => !!c.hybridOK);
@@ -1285,39 +1262,31 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
 
       {/* actions */}
       <div className="border-t border-[#f0f0f0] px-5 py-4">
-        {ADVANCE_DRAWER[c.status] && (
+        {c.status === "In Progress" && (
           <div className="flex items-center gap-2">
             <button
               onClick={onAdvance}
               className="flex-1 h-9 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
             >
-              {ADVANCE_DRAWER[c.status]}
+              Accept
             </button>
             <button
               onClick={onRequestDecline}
               className="h-9 px-4 rounded-md border border-[#FECACA] bg-white text-[#DC2626] text-[13px] font-medium hover:bg-[#FEF2F2] transition"
             >
-              Decline
+              Reject
             </button>
           </div>
         )}
-        {c.status === "Offer" && (
-          <div className="flex items-center justify-between text-[12px]">
-            <span className="text-[#9aa5b1]">Offer Sent</span>
-            <button
-              onClick={onRequestDecline}
-              className="h-9 px-4 rounded-md border border-[#FECACA] bg-white text-[#DC2626] text-[13px] font-medium hover:bg-[#FEF2F2] transition"
-            >
-              Decline
-            </button>
-          </div>
+        {c.status === "Accepted" && (
+          <div className="text-center text-[13px] font-medium text-[#16A34A]">Accepted</div>
         )}
-        {c.status === "Declined" && (
+        {c.status === "Rejected" && (
           <button
             onClick={onRestore}
             className="w-full h-9 rounded-md bg-[#f2f2f2] text-[#555] border border-[#e2e2e2] text-[13px] font-medium hover:bg-[#e8e8e8] transition"
           >
-            Restore to To Review
+            Restore to In Progress
           </button>
         )}
         {c.status === "Knocked Out" && (
@@ -1617,39 +1586,31 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
 
           {/* bottom fixed actions */}
           <div className="border-t border-[#f0f0f0] px-5 py-4 shrink-0">
-            {ADVANCE_DRAWER[c.status] && (
+            {c.status === "In Progress" && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onAdvance(c.id)}
                   className="flex-1 h-9 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
                 >
-                  {ADVANCE_DRAWER[c.status]}
+                  Accept
                 </button>
                 <button
                   onClick={() => onDecline(c)}
                   className="h-9 px-4 rounded-md border border-[#FECACA] bg-white text-[#DC2626] text-[13px] font-medium hover:bg-[#FEF2F2] transition"
                 >
-                  Decline
+                  Reject
                 </button>
               </div>
             )}
-            {c.status === "Offer" && (
-              <div className="flex items-center justify-between text-[12px]">
-                <span className="text-[#9aa5b1]">Offer Sent</span>
-                <button
-                  onClick={() => onDecline(c)}
-                  className="h-9 px-4 rounded-md border border-[#FECACA] bg-white text-[#DC2626] text-[13px] font-medium hover:bg-[#FEF2F2] transition"
-                >
-                  Decline
-                </button>
-              </div>
+            {c.status === "Accepted" && (
+              <div className="text-center text-[13px] font-medium text-[#16A34A]">Accepted</div>
             )}
-            {c.status === "Declined" && (
+            {c.status === "Rejected" && (
               <button
                 onClick={() => onRestore(c.id)}
                 className="w-full h-9 rounded-md bg-[#f2f2f2] text-[#555] border border-[#e2e2e2] text-[13px] font-medium hover:bg-[#e8e8e8] transition"
               >
-                Restore to To Review
+                Restore to In Progress
               </button>
             )}
             {c.status === "Knocked Out" && (
