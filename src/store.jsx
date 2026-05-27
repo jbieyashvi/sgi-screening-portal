@@ -15,6 +15,18 @@ export function AppProvider({ children }) {
   const [candidates, setCandidates] = useState(seedCandidates);
   const [activeReq, setActiveReq] = useState("REQ-2715");
   const [toasts, setToasts] = useState([]);
+  const [notesByCandidate, setNotesByCandidate] = useState({}); // { [id]: [{id,text,ts,author}] }
+
+  const addNote = useCallback((cid, text) => {
+    const t = text.trim();
+    if (!t) return;
+    const note = { id: Math.random().toString(36).slice(2), text: t, ts: Date.now(), author: "Candace W." };
+    setNotesByCandidate((m) => ({ ...m, [cid]: [...(m[cid] || []), note] }));
+  }, []);
+
+  const deleteNote = useCallback((cid, nid) => {
+    setNotesByCandidate((m) => ({ ...m, [cid]: (m[cid] || []).filter((n) => n.id !== nid) }));
+  }, []);
 
   // always-current snapshot so action handlers can read a candidate synchronously
   const candidatesRef = useRef(candidates);
@@ -129,6 +141,9 @@ export function AppProvider({ children }) {
         setCandidateStage,
         restoreCandidate,
         declineCandidate,
+        notesByCandidate,
+        addNote,
+        deleteNote,
         toasts,
         showToast,
       }}

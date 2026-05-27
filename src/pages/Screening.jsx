@@ -9,6 +9,7 @@ import {
   Search,
   Filter,
   Zap,
+  Trash2,
   Download,
   Mail,
   Phone,
@@ -1031,7 +1032,6 @@ const DRAWER_TABS = [
 
 function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }) {
   const [tab, setTab] = useState("overview");
-  const [notes, setNotes] = useState("");
   const mb = matchBadge(c.match);
   const stage = STAGE[c.status] || STAGE["To Review"];
 
@@ -1166,16 +1166,7 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
           </div>
         )}
 
-        {tab === "notes" && (
-          <div>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add a private note about this candidate…"
-              className="w-full min-h-[160px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2, 62, 138,0.1)]"
-            />
-          </div>
-        )}
+        {tab === "notes" && <NotesPanel candidateId={c.id} />}
       </div>
 
       {/* actions */}
@@ -1211,6 +1202,74 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
           <div className="text-center text-[12px] text-[#9aa5b1]">Review Manually</div>
         )}
       </div>
+    </div>
+  );
+}
+
+function NotesPanel({ candidateId }) {
+  const { notesByCandidate, addNote, deleteNote } = useApp();
+  const [text, setText] = useState("");
+  const [focused, setFocused] = useState(false);
+  const notes = notesByCandidate[candidateId] || [];
+  const showSave = focused || text.trim().length > 0;
+
+  const save = () => {
+    if (!text.trim()) return;
+    addNote(candidateId, text);
+    setText("");
+  };
+
+  return (
+    <div>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            save();
+          }
+        }}
+        placeholder="Add a note… (Enter to save, Shift+Enter for new line)"
+        className="w-full min-h-[80px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#94A3B8] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2,62,138,0.1)]"
+      />
+      {showSave && (
+        <div className="flex justify-end mt-2">
+          <button
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={save}
+            disabled={!text.trim()}
+            className="h-7 px-3 rounded-md bg-sgi text-white text-[12px] font-medium hover:bg-sgi-600 transition disabled:opacity-40"
+          >
+            Save Note
+          </button>
+        </div>
+      )}
+
+      {notes.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {notes.map((n) => (
+            <div key={n.id} className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-md p-3">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-[11px] text-[#94A3B8]">
+                  {new Date(n.ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {n.author}
+                </span>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => deleteNote(candidateId, n.id)}
+                  className="shrink-0 -m-1 p-1 rounded text-[#94A3B8] hover:text-[#DC2626] hover:bg-[#fef2f2] transition"
+                  aria-label="Delete note"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+              <p className="text-[13px] text-[#1E293B] whitespace-pre-wrap leading-relaxed">{n.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1278,14 +1337,6 @@ const DEGREES = ["B.S. Computer Science", "B.B.A. Business Analytics", "B.S. Sta
 function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDecline, onResume }) {
   const c = list[index];
   const [tab, setTab] = useState("overview");
-  const [notes, setNotes] = useState("");
-
-  // reset per-candidate fields when navigating (render-time, no effect)
-  const [curId, setCurId] = useState(c?.id);
-  if (c && c.id !== curId) {
-    setCurId(c.id);
-    setNotes("");
-  }
 
   const atFirst = index <= 0;
   const atLast = index >= list.length - 1;
@@ -1452,14 +1503,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
               </div>
             )}
 
-            {tab === "notes" && (
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add a private note about this candidate…"
-                className="w-full min-h-[200px] p-3 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#aaa] resize-y focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2, 62, 138,0.1)]"
-              />
-            )}
+            {tab === "notes" && <NotesPanel key={c.id} candidateId={c.id} />}
           </div>
 
           {/* bottom fixed actions */}
