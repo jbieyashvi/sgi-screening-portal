@@ -11,6 +11,7 @@ import {
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/screening", label: "Screening", icon: Users },
+  { to: "/settings", label: "Users", icon: UsersRound },
 ];
 
 export default function Layout() {
@@ -88,33 +89,6 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-
-        {/* Users — above profile */}
-        <div className="px-2 pb-1">
-          <NavLink
-            to="/settings"
-            title={collapsed ? "Users" : undefined}
-            className={({ isActive }) =>
-              `relative flex items-center h-10 ${
-                collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
-              } py-1.5 rounded text-[13px] transition ${
-                isActive
-                  ? "bg-[#E8F0FB] text-[#023E8A] font-semibold"
-                  : "text-[#4A5568] hover:bg-[#E8F0FB]"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && !collapsed && (
-                  <span className="absolute left-0 top-1 bottom-1 w-[2px] bg-[#023E8A] rounded-r" />
-                )}
-                <UsersRound size={15} className={`shrink-0 ${isActive ? "text-[#023E8A]" : "text-[#6B7280]"}`} />
-                {!collapsed && <span className="truncate">Users</span>}
-              </>
-            )}
-          </NavLink>
-        </div>
 
         <div
           className={`border-t border-[#C9DCF4] flex items-center ${
