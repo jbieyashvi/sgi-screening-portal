@@ -683,6 +683,82 @@ const declined = [
   ),
 ];
 
+// ---------------- ACCEPTED ----------------
+const acceptedTemplate = (id, name, title, loc, applied, years, match, summary) =>
+  make({
+    id,
+    name,
+    title,
+    location: loc,
+    applied,
+    years,
+    match,
+    status: "Accepted",
+    aiSummary: summary,
+    checks: { Location: true, Sponsorship: true, Hybrid: true, Experience: true, SQL: true, "Industry match": true },
+    experience: [
+      { role: title, company: "Confidential", years: `${2026 - Math.min(years, 5)} – Present` },
+      { role: "Senior Analyst", company: "Prior Employer", years: `${2026 - years} – ${2026 - Math.min(years, 5)}` },
+    ],
+    screening: [
+      { q: "Open to hybrid?", a: "Yes" },
+      { q: "Notice period?", a: "2 weeks" },
+    ],
+  });
+
+const accepted = [
+  acceptedTemplate(
+    "a1",
+    "Olivia Bennett",
+    "Senior Data Analyst",
+    "Atlanta, GA",
+    "2026-05-08",
+    8,
+    96,
+    "Olivia cleared all interview rounds with top marks — 8 years in warranty analytics, owns the full BI stack, strong exec presence. Offer accepted, start date confirmed."
+  ),
+  acceptedTemplate(
+    "a2",
+    "Daniel Foster",
+    "Data Lead",
+    "Marietta, GA",
+    "2026-05-05",
+    9,
+    92,
+    "Daniel impressed the panel with insurance-domain depth and team leadership. Comp aligned to band. Offer accepted pending background check."
+  ),
+  acceptedTemplate(
+    "a3",
+    "Sophia Hayes",
+    "BI Developer",
+    "Alpharetta, GA",
+    "2026-05-02",
+    6,
+    90,
+    "Sophia's technical screen and team-fit panel were both strong. Power BI and dbt expertise. Offer extended and accepted."
+  ),
+  acceptedTemplate(
+    "a4",
+    "Ethan Coleman",
+    "Senior Analyst",
+    "Duluth, GA",
+    "2026-04-29",
+    7,
+    88,
+    "Ethan brings 7 years across P&C insurance analytics. Cleared all rounds, accepted offer at target comp. Local, hybrid-ready."
+  ),
+  acceptedTemplate(
+    "a5",
+    "Ava Reyes",
+    "Analytics Engineer",
+    "Sandy Springs, GA",
+    "2026-04-26",
+    6,
+    87,
+    "Ava's Snowflake + dbt pipeline work stood out. Strong references. Offer accepted, starting next sprint."
+  ),
+];
+
 // ---------------- KNOCKED OUT ----------------
 const koTemplate = (id, name, title, loc, applied, years, reason, sponsorship = false) =>
   make({
@@ -889,6 +965,7 @@ export const candidates = [
   ...toReview,
   ...extraToReview,
   ...screening,
+  ...accepted,
   ...declined,
   ...knockedOut,
   ...generated,
