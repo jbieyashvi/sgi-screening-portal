@@ -135,6 +135,7 @@ const DEFAULT_HIDDEN = ["requisition", "source", "hiringManager", "recruiter"];
 const STAT_CARDS = [
   { key: "all", label: "Total", color: "text-[#1a1a1a]" },
   { key: "In Progress", label: "In Progress", color: "text-amber-600" },
+  { key: "Accepted", label: "Accepted", color: "text-[#16A34A]" },
   { key: "Knocked Out", label: "Knocked Out", color: "text-[#888]" },
   { key: "Rejected", label: "Rejected", color: "text-red-600" },
 ];
@@ -776,11 +777,6 @@ export default function Screening() {
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-[13px] text-[#1a1a1a] truncate max-w-[160px]">{c.name}</span>
                       <IntExtBadge internal={c.internal} />
-                      {c.aiReviewed && (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold tracking-wide bg-sgi-50 text-sgi border border-sgi-100 px-1 py-0.5 rounded shrink-0">
-                          <Sparkles size={8} /> AI
-                        </span>
-                      )}
                     </div>
                     <div className="text-[11px] text-[#9aa5b1] mt-0.5 truncate max-w-[160px]">{c.title}</div>
                   </Td>
@@ -1183,11 +1179,6 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
           <span className={`inline-block text-[11px] font-medium px-2 py-[3px] rounded-md tabular-nums ${mb.cls}`}>
             {mb.text === "—" ? "No match" : `${mb.text} match`}
           </span>
-          {c.aiReviewed && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-[3px] rounded-md bg-sgi-50 text-sgi">
-              <Sparkles size={10} /> AI Reviewed
-            </span>
-          )}
         </div>
       </div>
 
@@ -2089,7 +2080,7 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
         className="relative w-[480px] max-w-full bg-white rounded-[12px] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)] overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f0]">
-          <h3 className="text-[15px] font-semibold text-[#1a1a1a]">Decline Application</h3>
+          <h3 className="text-[15px] font-semibold text-[#1a1a1a]">Reject Application</h3>
           <button onClick={onCancel} className="p-1 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]" aria-label="Close">
             <X size={15} />
           </button>
@@ -2130,7 +2121,7 @@ function DeclineModal({ onCancel, onConfirm, count = 1 }) {
             Cancel
           </button>
           <button onClick={onConfirm} className="h-9 px-4 inline-flex items-center bg-[#023E8A] text-white rounded-md text-[13px] font-medium hover:bg-[#1A5EBF]">
-            Decline Application{count === 1 ? "" : "s"}
+            Reject Application{count === 1 ? "" : "s"}
           </button>
         </div>
       </div>

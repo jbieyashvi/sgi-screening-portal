@@ -24,16 +24,16 @@ const ROLES = [
   { name: "Reviewer", desc: "Reviews profiles", users: 1 },
 ];
 
-const STAGES = ["Screening", "Phone Screen", "Technical", "Manual Interview", "AI Interview", "Final Interview", "Offer"];
-const ACCESS = ["Full Access", "Edit Access", "View Only", "Feedback Only", "No Access"];
+const STAGES = ["View Candidates", "Accept/Reject", "Upload Resumes", "Use Ask AI", "View Analytics", "Manage Users", "Sync ADP"];
+const ACCESS = ["Full Access", "Edit Access", "View Only", "No Access"];
 
 const PERM_MATRIX = {
-  Admin: { Screening: "Full Access", "Phone Screen": "Full Access", Technical: "Full Access", "Manual Interview": "Full Access", "AI Interview": "Full Access", "Final Interview": "Full Access", Offer: "Full Access" },
-  "Hiring Manager": { Screening: "Edit Access", "Phone Screen": "View Only", Technical: "View Only", "Manual Interview": "Edit Access", "AI Interview": "View Only", "Final Interview": "Full Access", Offer: "Full Access" },
-  Recruiter: { Screening: "Full Access", "Phone Screen": "Edit Access", Technical: "View Only", "Manual Interview": "View Only", "AI Interview": "View Only", "Final Interview": "View Only", Offer: "No Access" },
-  Interviewer: { Screening: "View Only", "Phone Screen": "Feedback Only", Technical: "Feedback Only", "Manual Interview": "Feedback Only", "AI Interview": "Feedback Only", "Final Interview": "Feedback Only", Offer: "No Access" },
-  Coordinator: { Screening: "View Only", "Phone Screen": "View Only", Technical: "View Only", "Manual Interview": "View Only", "AI Interview": "View Only", "Final Interview": "View Only", Offer: "No Access" },
-  Reviewer: { Screening: "View Only", "Phone Screen": "Feedback Only", Technical: "Feedback Only", "Manual Interview": "View Only", "AI Interview": "Feedback Only", "Final Interview": "View Only", Offer: "No Access" },
+  Admin: { "View Candidates": "Full Access", "Accept/Reject": "Full Access", "Upload Resumes": "Full Access", "Use Ask AI": "Full Access", "View Analytics": "Full Access", "Manage Users": "Full Access", "Sync ADP": "Full Access" },
+  "Hiring Manager": { "View Candidates": "View Only", "Accept/Reject": "View Only", "Upload Resumes": "No Access", "Use Ask AI": "View Only", "View Analytics": "Full Access", "Manage Users": "No Access", "Sync ADP": "No Access" },
+  Recruiter: { "View Candidates": "Full Access", "Accept/Reject": "Full Access", "Upload Resumes": "Full Access", "Use Ask AI": "Full Access", "View Analytics": "View Only", "Manage Users": "No Access", "Sync ADP": "Edit Access" },
+  Interviewer: { "View Candidates": "View Only", "Accept/Reject": "No Access", "Upload Resumes": "No Access", "Use Ask AI": "No Access", "View Analytics": "No Access", "Manage Users": "No Access", "Sync ADP": "No Access" },
+  Coordinator: { "View Candidates": "View Only", "Accept/Reject": "View Only", "Upload Resumes": "Edit Access", "Use Ask AI": "No Access", "View Analytics": "No Access", "Manage Users": "No Access", "Sync ADP": "No Access" },
+  Reviewer: { "View Candidates": "View Only", "Accept/Reject": "No Access", "Upload Resumes": "No Access", "Use Ask AI": "No Access", "View Analytics": "No Access", "Manage Users": "No Access", "Sync ADP": "No Access" },
 };
 
 const initials = (name) => name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
