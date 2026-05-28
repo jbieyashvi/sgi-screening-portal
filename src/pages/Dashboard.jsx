@@ -4,12 +4,12 @@ import { ChevronDown, Search } from "lucide-react";
 /* ------------------------------- data ------------------------------------ */
 
 const REQS = [
-  { id: "REQ-2683", title: "Apprentice Installer / DSD", location: "Atlanta, GA", work: "Onsite",  kind: "Backfill", headcount: 1,  hiringManager: "Marcus Johnson",  recruiter: "Spencer Strobel", daysOpen: 22, stage: "Sourcing",            dept: "DSD" },
-  { id: "REQ-2667", title: "VSC Adjuster I-III",         location: "Atlanta, GA", work: "Hybrid",  kind: "New",      headcount: 17, hiringManager: "Sarah Williams",   recruiter: "Spencer Strobel", daysOpen: 22, stage: "Recruiter Phone Screen", dept: "Operations" },
-  { id: "REQ-2766", title: "VSC Manager",                location: "Greenville, SC", work: "Onsite",  kind: "Backfill", headcount: 1,  hiringManager: "David Chen",       recruiter: "Jon Marie",       daysOpen: 23, stage: "HM Video Interview",     dept: "Operations" },
-  { id: "REQ-2669", title: "Key Partner Executive I",    location: "Atlanta, GA", work: "Hybrid",  kind: "Backfill", headcount: 4,  hiringManager: "Jeri Hunnell",     recruiter: "Spencer Strobel", daysOpen: 99, stage: "Sourcing",               dept: "Key Partner" },
-  { id: "REQ-2732", title: "Regional Performance Manager — Honda", location: "Remote — ATL/PHL", work: "Remote", kind: "Backfill", headcount: 1, hiringManager: "Marcus Johnson", recruiter: "Spencer Strobel", daysOpen: 59, stage: "HM Video Interview", dept: "Sales & Training NVR" },
-  { id: "REQ-2746", title: "Account Development Manager — VCI",    location: "Remote — DFW",     work: "Remote", kind: "Backfill", headcount: 1, hiringManager: "Sarah Williams", recruiter: "Addis Davis",    daysOpen: 50, stage: "Start Date",         dept: "Sales & Training NVR" },
+  { id: "REQ-2683", title: "Apprentice Installer / DSD",           location: "Atlanta, GA",       work: "Onsite", kind: "Backfill",     headcount: 1,  hiringManager: "Joe Copeland",      recruiter: "Spencer",            daysOpen: 22, stage: "Recruiter Phone Screen", dept: "DSD",                  dateOpened: null,         agency: false },
+  { id: "REQ-2667", title: "VSC Adjuster I-III ATL",               location: "Atlanta, GA",       work: "Hybrid", kind: "New/Backfill", headcount: 17, hiringManager: "Revolving",         recruiter: "Spencer & Jon Marie", daysOpen: 22, stage: "Start Date",             dept: "Operations",           dateOpened: "May 4, 2026", agency: false },
+  { id: "REQ-2766", title: "VSC Manager",                          location: "Greenville, SC",    work: "Onsite", kind: "Backfill",     headcount: 1,  hiringManager: "Addis Davis",       recruiter: "Spencer",            daysOpen: 23, stage: "Sourcing",               dept: "Operations",           dateOpened: "May 5, 2026", agency: false },
+  { id: "REQ-2669", title: "Key Partner Executive I",              location: "Atlanta, GA",       work: "Hybrid", kind: "Backfill",     headcount: 4,  hiringManager: "Christina Sweeten", recruiter: "Spencer",            daysOpen: 99, stage: "HM Video Interview",     dept: "Key Partner",          dateOpened: "Feb 17, 2026", agency: true },
+  { id: "REQ-2732", title: "Regional Performance Manager Honda",   location: "Remote ATL/PHL",    work: "Remote", kind: "Backfill",     headcount: 1,  hiringManager: "Marc Wagstaff",     recruiter: "Spencer",            daysOpen: 59, stage: "Start Date",             dept: "Sales & Training NVR", dateOpened: "Mar 27, 2026", agency: false },
+  { id: "REQ-2746", title: "Account Development Manager VCI",      location: "Remote DFW",        work: "Remote", kind: "Backfill",     headcount: 1,  hiringManager: "Mike Baker",        recruiter: "Spencer",            daysOpen: 50, stage: "Start Date",             dept: "Sales & Training NVR", dateOpened: "Apr 6, 2026", agency: false },
 ];
 
 const SOURCING = [
@@ -24,9 +24,9 @@ const TOTAL_APPLICATIONS = 14077;
 
 const STAGE_COLOR = {
   "Recruiter Phone Screen": "bg-[#E8F0FB] text-[#023E8A] border-[#BFDBFE]",
-  "Sourcing":               "bg-amber-50 text-amber-700 border-amber-200",
-  "HM Video Interview":     "bg-violet-50 text-violet-700 border-violet-200",
-  "Start Date":             "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Sourcing":               "bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]",
+  "HM Video Interview":     "bg-[#F3E8FF] text-[#7C3AED] border-[#E9D5FF]",
+  "Start Date":             "bg-[#DCFCE7] text-[#16A34A] border-[#BBF7D0]",
 };
 const STAGE_ORDER = ["Sourcing", "Recruiter Phone Screen", "HM Video Interview", "Start Date"];
 
@@ -211,7 +211,12 @@ function V1({ reqs }) {
 
   const work = { Onsite: 0, Hybrid: 0, Remote: 0 };
   const kind = { New: 0, Backfill: 0 };
-  reqs.forEach((r) => { work[r.work] += 1; kind[r.kind] += 1; });
+  reqs.forEach((r) => {
+    work[r.work] += 1;
+    // "New/Backfill" counts as the primary kind (New) so totals add to req count
+    if (r.kind === "New/Backfill") kind.New += 1;
+    else if (kind[r.kind] != null) kind[r.kind] += 1;
+  });
   const workMax = Math.max(work.Onsite, work.Hybrid, work.Remote, 1);
   const kindMax = Math.max(kind.New, kind.Backfill, 1);
 
@@ -225,20 +230,22 @@ function V1({ reqs }) {
         <StatCard label="Total Applications" value={apps.toLocaleString("en-US")} />
       </div>
 
-      <div className="grid grid-cols-5 gap-6 mb-6">
-        {/* sourcing */}
-        <div className="col-span-3 bg-white rounded-xl border border-slate-200 p-5">
+      <div className="grid grid-cols-12 gap-6 mb-6">
+        {/* sourcing — narrower */}
+        <div className="col-span-5 bg-white rounded-xl border border-slate-200 p-5">
           <h2 className="font-semibold text-slate-900">Candidate Sourcing</h2>
-          <p className="text-[12px] text-slate-500 mt-0.5 mb-4">
+          <p className="text-[12px] text-slate-500 mt-0.5 mb-3">
             {TOTAL_APPLICATIONS.toLocaleString("en-US")} applications · all sources
           </p>
-          <div className="flex items-center gap-6">
-            <Donut data={SOURCING} total={TOTAL_APPLICATIONS} />
-            <ul className="flex-1 space-y-2">
+          <div className="flex items-center gap-4">
+            <div className="w-1/2 flex justify-center">
+              <Donut data={SOURCING} size={160} thickness={24} total={TOTAL_APPLICATIONS} />
+            </div>
+            <ul className="w-1/2 space-y-2">
               {SOURCING.map((s) => (
-                <li key={s.label} className="flex items-center gap-2.5 text-[13px]">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
-                  <span className="flex-1 text-slate-700">{s.label}</span>
+                <li key={s.label} className="flex items-center gap-2 text-[13px]">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
+                  <span className="flex-1 text-slate-700 truncate">{s.label}</span>
                   <span className="text-slate-500 tabular-nums">{s.pct}%</span>
                 </li>
               ))}
@@ -246,32 +253,40 @@ function V1({ reqs }) {
           </div>
         </div>
 
-        {/* position type */}
-        <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-5">
+        {/* position type — wider */}
+        <div className="col-span-7 bg-white rounded-xl border border-slate-200 p-5">
           <h2 className="font-semibold text-slate-900 mb-4">Position Type</h2>
-          <div className="space-y-2.5">
-            {["Onsite", "Hybrid", "Remote"].map((k) => (
-              <div key={k} className="flex items-center gap-3 text-[13px]">
-                <div className="w-16 text-slate-600">{k}</div>
-                <div className="flex-1 h-5 rounded bg-[#F1F5F9] overflow-hidden">
-                  <div className="h-full rounded bg-[#023E8A]" style={{ width: `${(work[k] / workMax) * 100}%` }} />
+          <div className="space-y-3">
+            {["Onsite", "Hybrid", "Remote"].map((k) => {
+              const pct = Math.round((work[k] / reqs.length) * 100);
+              return (
+                <div key={k} className="flex items-center gap-3 text-[13px]">
+                  <div className="w-20 text-slate-600">{k}</div>
+                  <div className="flex-1 h-6 rounded bg-[#F1F5F9] overflow-hidden relative">
+                    <div className="h-full rounded bg-[#023E8A]" style={{ width: `${(work[k] / workMax) * 100}%` }} />
+                  </div>
+                  <div className="w-12 text-right font-semibold tabular-nums text-slate-900">{work[k]}</div>
+                  <div className="w-12 text-right text-slate-500 tabular-nums">{pct}%</div>
                 </div>
-                <div className="w-6 text-right font-semibold tabular-nums text-slate-900">{work[k]}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <h3 className="font-semibold text-slate-900 mt-5 mb-3 text-[13px]">New vs Backfill</h3>
-          <div className="space-y-2.5">
-            {["New", "Backfill"].map((k) => (
-              <div key={k} className="flex items-center gap-3 text-[13px]">
-                <div className="w-16 text-slate-600">{k}</div>
-                <div className="flex-1 h-5 rounded bg-[#F1F5F9] overflow-hidden">
-                  <div className="h-full rounded bg-[#2979D4]" style={{ width: `${(kind[k] / kindMax) * 100}%` }} />
+          <h3 className="font-semibold text-slate-900 mt-6 mb-3 text-[13px]">New vs Backfill</h3>
+          <div className="space-y-3">
+            {["New", "Backfill"].map((k) => {
+              const pct = Math.round((kind[k] / reqs.length) * 100);
+              return (
+                <div key={k} className="flex items-center gap-3 text-[13px]">
+                  <div className="w-20 text-slate-600">{k}</div>
+                  <div className="flex-1 h-6 rounded bg-[#F1F5F9] overflow-hidden">
+                    <div className="h-full rounded bg-[#2979D4]" style={{ width: `${(kind[k] / kindMax) * 100}%` }} />
+                  </div>
+                  <div className="w-12 text-right font-semibold tabular-nums text-slate-900">{kind[k]}</div>
+                  <div className="w-12 text-right text-slate-500 tabular-nums">{pct}%</div>
                 </div>
-                <div className="w-6 text-right font-semibold tabular-nums text-slate-900">{kind[k]}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -287,6 +302,7 @@ function V1({ reqs }) {
               <th className="px-5 py-2.5 font-semibold">REQ #</th>
               <th className="px-3 py-2.5 font-semibold">Job Title</th>
               <th className="px-3 py-2.5 font-semibold">Location</th>
+              <th className="px-3 py-2.5 font-semibold">Department</th>
               <th className="px-3 py-2.5 font-semibold">Hiring Manager</th>
               <th className="px-3 py-2.5 font-semibold">Recruiter</th>
               <th className="px-3 py-2.5 font-semibold text-right">Days Open</th>
@@ -299,6 +315,7 @@ function V1({ reqs }) {
                 <td className="px-5 py-3 font-medium text-[#023E8A]">{r.id}</td>
                 <td className="px-3 py-3 text-slate-800">{r.title}</td>
                 <td className="px-3 py-3 text-slate-600">{r.location}</td>
+                <td className="px-3 py-3 text-slate-600">{r.dept}</td>
                 <td className="px-3 py-3 text-slate-600">{r.hiringManager}</td>
                 <td className="px-3 py-3 text-slate-600">{r.recruiter}</td>
                 <td className={`px-3 py-3 text-right font-semibold tabular-nums ${daysColor(r.daysOpen)}`}>{r.daysOpen}</td>
@@ -334,65 +351,97 @@ function V2({ reqs }) {
     return true;
   });
 
+  const headcount = reqs.reduce((s, r) => s + r.headcount, 0);
+  const avgDays = Math.round(reqs.reduce((s, r) => s + r.daysOpen, 0) / Math.max(reqs.length, 1));
+  const apps = Math.round(TOTAL_APPLICATIONS * (reqs.length / REQS.length));
+
   return (
     <>
+      {/* tinted stat cards */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <ColorStat label="Total Open REQs"    value={reqs.length}                  bg="#E8F0FB" fg="#023E8A" />
+        <ColorStat label="Total Headcount"    value={headcount}                    bg="#DCFCE7" fg="#16A34A" />
+        <ColorStat label="Avg Days Open"      value={avgDays}                      bg="#FEF3C7" fg="#B45309" />
+        <ColorStat label="Total Applications" value={apps.toLocaleString("en-US")} bg="#F3E8FF" fg="#7C3AED" />
+      </div>
+
       {/* filter bar */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <Select label="Recruiter" value={recF} onChange={setRecF} options={[{ value: "all", label: "All Recruiters" }, ...recruiters.map((r) => ({ value: r.name, label: `${r.name} (${r.count})` }))]} />
         <Select label="Status" value={stageF} onChange={setStageF} options={[{ value: "all", label: "All Statuses" }, ...STAGE_ORDER.map((s) => ({ value: s, label: s }))]} />
       </div>
 
-      {/* per-REQ pipeline cards */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {visible.map((r) => {
-          const idx = STAGE_ORDER.indexOf(r.stage);
-          const progress = ((idx + 1) / STAGE_ORDER.length) * 100;
-          return (
-            <div key={r.id} className="bg-white rounded-xl border border-slate-200 p-5">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <div className="text-[12px] text-[#023E8A] font-semibold">{r.id}</div>
-                  <div className="text-[15px] font-semibold text-slate-900 leading-tight">{r.title}</div>
-                  <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-2">
-                    <span className="inline-block text-[11px] font-medium px-2 py-[2px] rounded bg-[#F1F5F9] text-slate-600">{r.location}</span>
-                    <span className="inline-block text-[11px] font-medium px-2 py-[2px] rounded bg-[#F1F5F9] text-slate-600">{r.work}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-[22px] font-bold leading-none tabular-nums ${daysColor(r.daysOpen)}`}>{r.daysOpen}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400 mt-0.5">days open</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mt-3 mb-1">
-                <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border ${STAGE_COLOR[r.stage]}`}>{r.stage}</span>
-                <span className="text-[12px] text-slate-600">Headcount: <span className="font-semibold text-slate-900">{r.headcount}</span></span>
-              </div>
-
-              {/* progress */}
-              <div className="h-1.5 rounded bg-[#F1F5F9] overflow-hidden mt-2">
-                <div className="h-full rounded bg-[#023E8A]" style={{ width: `${progress}%` }} />
-              </div>
-              <div className="flex justify-between mt-1 text-[10px] text-slate-400">
-                {STAGE_ORDER.map((s) => (<span key={s}>{s.split(" ")[0]}</span>))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mt-4 text-[12px]">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400">Hiring Manager</div>
-                  <div className="text-slate-700">{r.hiringManager}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400">Recruiter</div>
-                  <div className="text-slate-700">{r.recruiter}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {visible.length === 0 && (
-          <div className="col-span-2 text-center py-10 text-slate-400 text-[13px]">No requisitions match the current filters.</div>
-        )}
+      {/* req table — clean, single header row */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-6">
+        <div className="px-5 py-3 border-b border-slate-200">
+          <h2 className="font-semibold text-slate-900">Requisition Pipeline</h2>
+        </div>
+        <table className="w-full text-left text-[12px] table-fixed">
+          <colgroup>
+            <col style={{ width: 70 }} />
+            <col style={{ width: 170 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 70 }} />
+            <col style={{ width: 110 }} />
+            <col style={{ width: 120 }} />
+            <col style={{ width: 95 }} />
+            <col style={{ width: 120 }} />
+            <col style={{ width: 130 }} />
+            <col style={{ width: 70 }} />
+            <col style={{ width: 70 }} />
+            <col style={{ width: 120 }} />
+          </colgroup>
+          <thead className="bg-[#fbfbfc] text-[11px] uppercase tracking-wide text-[#8a93a0]">
+            <tr>
+              <th className="px-3 py-2.5 font-semibold">REQ #</th>
+              <th className="px-2 py-2.5 font-semibold">Job Title</th>
+              <th className="px-2 py-2.5 font-semibold">Location</th>
+              <th className="px-2 py-2.5 font-semibold">Position</th>
+              <th className="px-2 py-2.5 font-semibold">Type</th>
+              <th className="px-2 py-2.5 font-semibold">Department</th>
+              <th className="px-2 py-2.5 font-semibold">Date Opened</th>
+              <th className="px-2 py-2.5 font-semibold">Hiring Manager</th>
+              <th className="px-2 py-2.5 font-semibold">Recruiter</th>
+              <th className="px-2 py-2.5 font-semibold text-right">Headcount</th>
+              <th className="px-2 py-2.5 font-semibold text-right">Days Open</th>
+              <th className="px-2 py-2.5 font-semibold pr-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((r) => {
+              const title = r.title.replace(/Manager/g, "Mgr");
+              return (
+                <tr key={r.id} className="border-t border-[#f3f4f6] hover:bg-[#F8FAFC] transition">
+                  <td className="px-3 py-2.5 font-medium text-[#023E8A] whitespace-nowrap">{r.id}</td>
+                  <td className="px-2 py-2.5 text-slate-800 truncate" title={r.title}>{title}</td>
+                  <td className="px-2 py-2.5 text-slate-600 truncate" title={r.location}>{r.location}</td>
+                  <td className="px-2 py-2.5 text-slate-600">{r.work}</td>
+                  <td className="px-2 py-2.5 whitespace-nowrap"><TypeChips kind={r.kind} /></td>
+                  <td className="px-2 py-2.5 text-slate-600 truncate" title={r.dept}>{r.dept}</td>
+                  <td className="px-2 py-2.5 text-slate-600 truncate" title={r.dateOpened || ""}>
+                    {r.dateOpened || <span className="text-slate-400">—</span>}
+                  </td>
+                  <td className="px-2 py-2.5 text-slate-600 truncate" title={r.hiringManager}>{r.hiringManager}</td>
+                  <td className="px-2 py-2.5 text-slate-600 truncate" title={r.recruiter}>{r.recruiter}</td>
+                  <td className="px-2 py-2.5 text-right font-semibold tabular-nums text-slate-900">{r.headcount}</td>
+                  <td className={`px-2 py-2.5 text-right font-semibold tabular-nums ${daysColor(r.daysOpen)}`}>{r.daysOpen}</td>
+                  <td className="px-2 py-2.5 pr-3">
+                    <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full border whitespace-nowrap ${STAGE_COLOR[r.stage]}`}>
+                      {r.stage}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+            {visible.length === 0 && (
+              <tr>
+                <td colSpan={12} className="px-5 py-10 text-center text-slate-400 text-[13px]">
+                  No requisitions match the current filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* recruiter summary */}
@@ -409,6 +458,30 @@ function V2({ reqs }) {
         </div>
       </div>
     </>
+  );
+}
+
+function ColorStat({ label, value, bg, fg = "#1a1a1a" }) {
+  return (
+    <div className="rounded-xl p-5" style={{ background: bg, color: fg }}>
+      <div className="text-[12px] opacity-80">{label}</div>
+      <div className="text-[28px] font-bold mt-1 tabular-nums leading-none">{value}</div>
+    </div>
+  );
+}
+
+function TypeChips({ kind }) {
+  const newChip  = <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[#DCFCE7] text-[#16A34A]">New</span>;
+  const bfChip   = <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[#FEE2E2] text-[#DC2626]">Backfill</span>;
+  if (kind === "New") return newChip;
+  if (kind === "Backfill") return bfChip;
+  // "New/Backfill" → both with + separator
+  return (
+    <span className="inline-flex items-center gap-1">
+      {newChip}
+      <span className="text-slate-400">+</span>
+      {bfChip}
+    </span>
   );
 }
 
@@ -483,7 +556,11 @@ function V3({ reqs }) {
           <p className="text-[12px] text-slate-500 mb-4">Color-coded by age threshold</p>
           <div className="space-y-2.5">
             {reqs.map((r) => (
-              <div key={r.id} className="flex items-center gap-2.5 text-[12px]">
+              <div
+                key={r.id}
+                className="flex items-center gap-2.5 text-[12px] cursor-default"
+                title={`${r.id} — ${r.title}`}
+              >
                 <div className="w-16 shrink-0 text-slate-600 tabular-nums">{r.id.replace("REQ-", "")}</div>
                 <div className="flex-1 h-5 rounded bg-[#F1F5F9] overflow-hidden">
                   <div
@@ -526,25 +603,43 @@ function V3({ reqs }) {
             <tr>
               <th className="px-5 py-2.5 font-semibold">REQ #</th>
               <th className="px-3 py-2.5 font-semibold">Title</th>
+              <th className="px-3 py-2.5 font-semibold text-center">Headcount</th>
               <th className="px-3 py-2.5 font-semibold text-center">Onsite</th>
               <th className="px-3 py-2.5 font-semibold text-center">Hybrid</th>
               <th className="px-3 py-2.5 font-semibold text-center">Remote</th>
               <th className="px-3 py-2.5 font-semibold text-center">New</th>
-              <th className="px-3 py-2.5 font-semibold text-center pr-5">Backfill</th>
+              <th className="px-3 py-2.5 font-semibold text-center">Backfill</th>
+              <th className="px-3 py-2.5 font-semibold text-center pr-5">Agency</th>
             </tr>
           </thead>
           <tbody>
-            {reqs.map((r) => (
-              <tr key={r.id} className="border-t border-[#f3f4f6]">
-                <td className="px-5 py-2.5 font-medium text-[#023E8A]">{r.id}</td>
-                <td className="px-3 py-2.5 text-slate-700">{r.title}</td>
-                <Cell on={r.work === "Onsite"} />
-                <Cell on={r.work === "Hybrid"} />
-                <Cell on={r.work === "Remote"} />
-                <Cell on={r.kind === "New"} />
-                <Cell on={r.kind === "Backfill"} end />
-              </tr>
-            ))}
+            {reqs.map((r) => {
+              const isNew = r.kind === "New" || r.kind === "New/Backfill";
+              const isBackfill = r.kind === "Backfill" || r.kind === "New/Backfill";
+              return (
+                <tr key={r.id} className="border-t border-[#f3f4f6]">
+                  <td className="px-5 py-2.5 font-medium text-[#023E8A]">{r.id}</td>
+                  <td className="px-3 py-2.5 text-slate-700">{r.title}</td>
+                  <td className="px-3 py-2.5 text-center">
+                    <span className={`font-bold tabular-nums ${r.headcount > 1 ? "text-[16px] text-[#023E8A]" : "text-slate-900"}`}>
+                      {r.headcount}
+                    </span>
+                  </td>
+                  <Cell on={r.work === "Onsite"} />
+                  <Cell on={r.work === "Hybrid"} />
+                  <Cell on={r.work === "Remote"} />
+                  <Cell on={isNew} />
+                  <Cell on={isBackfill} />
+                  <td className="px-3 py-2.5 text-center pr-5">
+                    {r.agency ? (
+                      <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#E8F0FB] text-[#023E8A]">Yes</span>
+                    ) : (
+                      <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#F1F5F9] text-slate-500">No</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -552,9 +647,9 @@ function V3({ reqs }) {
   );
 }
 
-function Cell({ on, end }) {
+function Cell({ on }) {
   return (
-    <td className={`px-3 py-2.5 text-center ${end ? "pr-5" : ""}`}>
+    <td className="px-3 py-2.5 text-center">
       {on ? (
         <span className="inline-block w-4 h-4 rounded-full bg-[#023E8A]" />
       ) : (
