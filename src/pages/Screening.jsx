@@ -146,7 +146,9 @@ export default function Screening() {
   const { candidates, requisitions, advanceCandidate, restoreCandidate, declineCandidate, showToast } =
     useApp();
 
-  const [reqFilter, setReqFilter] = useState("REQ-2715");
+  const [reqFilter, setReqFilter] = useState(() => new Set(["REQ-2715"]));
+  const [reqDraft, setReqDraft] = useState(() => new Set(["REQ-2715"]));
+  const [reqSearch, setReqSearch] = useState("");
   const [query, setQuery] = useState("");
   const [aiQuery, setAiQuery] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
@@ -159,6 +161,7 @@ export default function Screening() {
   const [bulkDecline, setBulkDecline] = useState(false);
   const [bulkAdvOpen, setBulkAdvOpen] = useState(false);
   const [declineTarget, setDeclineTarget] = useState(null);
+  const [advanceTarget, setAdvanceTarget] = useState(null);
   const bulkAdvRef = useRef(null);
   const [focusOpen, setFocusOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(0);
@@ -234,7 +237,7 @@ export default function Screening() {
   /* ----------------------------- filtering ------------------------------- */
 
   const reqCandidates = useMemo(
-    () => (reqFilter === "all" ? candidates : candidates.filter((c) => c.reqId === reqFilter)),
+    () => (reqFilter.size === 0 ? candidates : candidates.filter((c) => reqFilter.has(c.reqId))),
     [candidates, reqFilter]
   );
 
@@ -290,7 +293,7 @@ export default function Screening() {
 
   // reset to page 1 whenever the filter/result set changes (render-time adjust)
   const totalPages = Math.max(1, Math.ceil(sorted.length / rpp));
-  const filterKey = `${reqFilter}|${query}|${rpp}|${[...srcF].sort()}|${[...locF].sort()}|${[...stageF].sort()}|${[...matchF].sort()}|${[...salaryF].sort()}|${aiChips.map((c) => c.id).join(",")}`;
+  const filterKey = `${[...reqFilter].sort().join(",") || "all"}|${query}|${rpp}|${[...srcF].sort()}|${[...locF].sort()}|${[...stageF].sort()}|${[...matchF].sort()}|${[...salaryF].sort()}|${aiChips.map((c) => c.id).join(",")}`;
   const [prevKey, setPrevKey] = useState(filterKey);
   if (filterKey !== prevKey) {
     setPrevKey(filterKey);
@@ -314,7 +317,14 @@ export default function Screening() {
       return next;
     });
 
-  const activeReqObj = requisitions.find((r) => r.id === reqFilter);
+  const onlyReqId = reqFilter.size === 1 ? [...reqFilter][0] : null;
+  const activeReqObj = onlyReqId ? requisitions.find((r) => r.id === onlyReqId) : null;
+  const reqButtonLabel =
+    reqFilter.size === 0
+      ? "All Job Openings"
+      : reqFilter.size === 1
+      ? `${activeReqObj?.id} — ${activeReqObj?.title}`
+      : `${reqFilter.size} Requisitions Selected`;
   const reqCounts = useMemo(() => {
     const m = {};
     candidates.forEach((c) => { m[c.reqId] = (m[c.reqId] || 0) + 1; });
@@ -512,48 +522,114 @@ export default function Screening() {
             <h1 className="text-[18px] font-bold text-[#1a1a1a] leading-none">
               Candidates
             </h1>
-            {/* Requisition dropdown */}
+            {/* Requisition dropdown — multi-select w/ search */}
             <div className="relative" ref={reqRef}>
               <button
-                onClick={() => setReqOpen((o) => !o)}
+                onClick={() => {
+                  setReqDraft(new Set(reqFilter));
+                  setReqSearch("");
+                  setReqOpen((o) => !o);
+                }}
                 className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[13px] transition ${
                   reqOpen
                     ? "border-sgi-300 bg-sgi-50 text-sgi"
                     : "border-[#E2E8F0] text-[#4A5568] hover:bg-[#F7FAFC]"
                 }`}
               >
-                <span className="font-medium truncate max-w-[260px]">
-                  {reqFilter === "all" ? "All Job Openings" : `${activeReqObj?.id} — ${activeReqObj?.title}`}
-                </span>
+                <span className="font-medium truncate max-w-[260px]">{reqButtonLabel}</span>
                 <ChevronDown size={14} className={`shrink-0 transition-transform ${reqOpen ? "rotate-180" : ""}`} />
               </button>
               {reqOpen && (
-                <div className="absolute left-0 top-full mt-1 z-30 w-[320px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] p-1">
-                  <ReqOption
-                    active={reqFilter === "all"}
-                    onClick={() => { setReqFilter("all"); setReqOpen(false); }}
-                    label="All Job Openings"
-                    count={candidates.length}
-                  />
-                  {requisitions
-                    .filter((r) => (reqCounts[r.id] || 0) > 0)
-                    .map((r) => (
-                      <ReqOption
-                        key={r.id}
-                        active={reqFilter === r.id}
-                        onClick={() => { setReqFilter(r.id); setReqOpen(false); }}
-                        label={`${r.id} — ${r.title}`}
-                        count={reqCounts[r.id]}
-                        sync={r.adpSync}
+                <div className="absolute left-0 top-full mt-1 z-30 w-[320px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] flex flex-col">
+                  {/* search */}
+                  <div className="p-2 border-b border-[#f0f0f0]">
+                    <div className="relative">
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9aa5b1]" />
+                      <input
+                        autoFocus
+                        value={reqSearch}
+                        onChange={(e) => setReqSearch(e.target.value)}
+                        placeholder="Search requisitions…"
+                        className="w-full pl-7 pr-2.5 py-1.5 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400"
                       />
-                    ))}
-                  <div className="my-1 border-t border-[#f0f0f0]" />
-                  <button
-                    onClick={() => { showToast("Syncing with ADP…"); setReqOpen(false); }}
-                    className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-[12px] font-medium text-sgi hover:bg-[#E8F0FB] transition"
-                  >
-                    <RefreshCw size={13} /> Sync ADP now
-                  </button>
+                    </div>
+                  </div>
+
+                  {/* options */}
+                  <div className="max-h-[300px] overflow-auto p-1">
+                    <ReqOption
+                      checked={reqDraft.size === 0}
+                      onToggle={() => setReqDraft(new Set())}
+                      label="All Job Openings"
+                      count={candidates.length}
+                    />
+                    {requisitions
+                      .filter((r) => (reqCounts[r.id] || 0) > 0)
+                      .filter((r) => {
+                        const q = reqSearch.trim().toLowerCase();
+                        if (!q) return true;
+                        return `${r.id} ${r.title}`.toLowerCase().includes(q);
+                      })
+                      .map((r) => (
+                        <ReqOption
+                          key={r.id}
+                          checked={reqDraft.has(r.id)}
+                          onToggle={() =>
+                            setReqDraft((prev) => {
+                              const next = new Set(prev);
+                              next.has(r.id) ? next.delete(r.id) : next.add(r.id);
+                              return next;
+                            })
+                          }
+                          label={`${r.id} — ${r.title}`}
+                          count={reqCounts[r.id]}
+                          sync={r.adpSync}
+                        />
+                      ))}
+                  </div>
+
+                  {/* footer actions */}
+                  <div className="border-t border-[#f0f0f0] px-3 py-2 flex items-center justify-between">
+                    <button
+                      onClick={() => setReqDraft(new Set())}
+                      className="text-[12px] text-[#6B7280] hover:text-[#1a1a1a] hover:underline"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => {
+                        const next = new Set(reqDraft);
+                        setReqFilter(next);
+                        // auto show/hide the Requisition column based on selection breadth
+                        setHiddenCols((prev) => {
+                          const h = new Set(prev);
+                          if (next.size === 1) h.add("requisition");
+                          else h.delete("requisition");
+                          return h;
+                        });
+                        // ensure requisition sits first in colOrder (right after locked Name)
+                        setColOrder((prev) => {
+                          if (prev[0] === "requisition") return prev;
+                          const a = prev.filter((k) => k !== "requisition");
+                          return ["requisition", ...a];
+                        });
+                        setReqOpen(false);
+                      }}
+                      className="h-7 px-3 rounded-md bg-[#023E8A] text-white text-[12px] font-medium hover:bg-[#1A5EBF] transition"
+                    >
+                      Apply
+                    </button>
+                  </div>
+
+                  {/* sync adp */}
+                  <div className="border-t border-[#f0f0f0] p-1">
+                    <button
+                      onClick={() => { showToast("Syncing with ADP…"); setReqOpen(false); }}
+                      className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-[12px] font-medium text-sgi hover:bg-[#E8F0FB] transition"
+                    >
+                      <RefreshCw size={13} /> Sync ADP now
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -616,35 +692,52 @@ export default function Screening() {
                   <span className="ml-auto text-[10px] text-[#bbb]">locked</span>
                 </label>
 
-                {/* draggable data columns */}
-                {colOrder.map((key) => (
-                  <label
-                    key={key}
-                    draggable
-                    onDragStart={() => setDragCol(key)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => { moveCol(dragCol, key); setDragCol(null); }}
-                    onDragEnd={() => setDragCol(null)}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] hover:bg-[#fafafa] cursor-pointer ${
-                      dragCol === key ? "opacity-50" : ""
-                    }`}
-                  >
-                    <GripVertical size={13} className="text-[#cbd5e0] hover:text-[#94A3B8] cursor-grab shrink-0" />
-                    <input
-                      type="checkbox"
-                      checked={!hiddenCols.has(key)}
-                      onChange={() =>
-                        setHiddenCols((prev) => {
-                          const next = new Set(prev);
-                          next.has(key) ? next.delete(key) : next.add(key);
-                          return next;
-                        })
-                      }
-                      className="minicheck"
-                    />
-                    {colLabel(key)}
-                  </label>
-                ))}
+                {/* draggable data columns — checked group on top, divider, unchecked below */}
+                {(() => {
+                  const checked = colOrder.filter((k) => !hiddenCols.has(k));
+                  const unchecked = colOrder.filter((k) => hiddenCols.has(k));
+                  const renderRow = (key, group) => (
+                    <label
+                      key={key}
+                      draggable
+                      onDragStart={() => setDragCol(key)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => {
+                        const sameGroup = group.includes(dragCol);
+                        if (sameGroup) moveCol(dragCol, key);
+                        setDragCol(null);
+                      }}
+                      onDragEnd={() => setDragCol(null)}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] hover:bg-[#fafafa] cursor-pointer ${
+                        dragCol === key ? "opacity-50" : ""
+                      }`}
+                    >
+                      <GripVertical size={13} className="text-[#cbd5e0] hover:text-[#94A3B8] cursor-grab shrink-0" />
+                      <input
+                        type="checkbox"
+                        checked={!hiddenCols.has(key)}
+                        onChange={() =>
+                          setHiddenCols((prev) => {
+                            const next = new Set(prev);
+                            next.has(key) ? next.delete(key) : next.add(key);
+                            return next;
+                          })
+                        }
+                        className="minicheck"
+                      />
+                      {colLabel(key)}
+                    </label>
+                  );
+                  return (
+                    <>
+                      {checked.map((k) => renderRow(k, checked))}
+                      {checked.length > 0 && unchecked.length > 0 && (
+                        <div className="my-1 border-t border-[#E2E8F0]" />
+                      )}
+                      {unchecked.map((k) => renderRow(k, unchecked))}
+                    </>
+                  );
+                })()}
 
                 {/* locked: Actions */}
                 <label className="flex items-center gap-2 px-2 py-1.5 rounded text-[12px] text-[#1a1a1a] opacity-60 cursor-not-allowed">
@@ -790,7 +883,7 @@ export default function Screening() {
                       {c.status === "In Progress" && (
                         <>
                           <button
-                            onClick={(e) => { e.stopPropagation(); advanceCandidate(c.id); }}
+                            onClick={(e) => { e.stopPropagation(); setAdvanceTarget(c); }}
                             className="inline-flex items-center px-2.5 py-[3px] rounded-md text-[11px] font-medium bg-[#DCFCE7] text-[#16A34A] hover:bg-[#c5f5d3] transition"
                           >
                             Accept
@@ -991,7 +1084,7 @@ export default function Screening() {
               key={selected.id}
               c={selected}
               onClose={() => setSelectedId(null)}
-              onAdvance={() => advanceCandidate(selected.id)}
+              onAdvance={() => setAdvanceTarget(selected)}
               onRestore={() => restoreCandidate(selected.id)}
               onResume={() => showToast(`Downloading ${selected.name}'s resume`)}
               onRequestDecline={() => setDeclineTarget(selected)}
@@ -1007,10 +1100,23 @@ export default function Screening() {
           index={Math.min(focusIndex, sorted.length - 1)}
           setIndex={setFocusIndex}
           onClose={() => setFocusOpen(false)}
-          onAdvance={(id) => advanceCandidate(id)}
+          onAdvance={(cand) => setAdvanceTarget(cand)}
           onRestore={(id) => restoreCandidate(id)}
           onDecline={(cand) => setDeclineTarget(cand)}
           onResume={(cand) => showToast(`Downloading ${cand.name}'s resume`)}
+        />
+      )}
+
+      {/* advance modal */}
+      {advanceTarget && (
+        <AdvanceModal
+          count={1}
+          onCancel={() => setAdvanceTarget(null)}
+          onConfirm={(stage) => {
+            advanceCandidate(advanceTarget.id);
+            showToast(`${advanceTarget.name} → ${stage}`);
+            setAdvanceTarget(null);
+          }}
         />
       )}
 
@@ -1134,24 +1240,16 @@ const DRAWER_TABS = [
 
 function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }) {
   const [tab, setTab] = useState("overview");
+  const [showResume, setShowResume] = useState(false);
   const mb = matchBadge(c.match);
   const stage = STAGE[c.status] || STAGE["To Review"];
 
   return (
     <div className="relative flex flex-col h-full bg-white">
-      {/* close */}
-      <button
-        onClick={onClose}
-        className="absolute top-3 right-3 z-10 p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]"
-        aria-label="Close"
-      >
-        <X size={16} />
-      </button>
-
       {/* header */}
       <div className="px-5 pt-5 pb-4 border-b border-[#f0f0f0]">
-        <div className="flex items-center gap-2 pr-8">
-          <h2 className="text-[19px] font-bold text-[#1a1a1a] leading-tight">{c.name}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-[19px] font-bold text-[#1a1a1a] leading-tight flex-1 min-w-0 truncate">{c.name}</h2>
           <a
             href="#"
             onClick={(e) => e.preventDefault()}
@@ -1166,6 +1264,21 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
             className="shrink-0 p-1 rounded-md text-[#9aa5b1] hover:text-sgi hover:bg-sgi-50 transition"
           >
             <Download size={15} />
+          </button>
+          <button
+            onClick={() => setShowResume(true)}
+            className="shrink-0 inline-flex items-center gap-1 text-[11px] font-medium rounded-[4px] border border-[#023E8A] text-[#023E8A] bg-white hover:bg-sgi-50 transition"
+            style={{ padding: "3px 10px" }}
+            title="View resume"
+          >
+            <FileText size={11} /> View Resume
+          </button>
+          <button
+            onClick={onClose}
+            className="shrink-0 p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]"
+            aria-label="Close"
+          >
+            <X size={16} />
           </button>
         </div>
         <div className="text-[12px] text-[#6B7280] mt-1">
@@ -1284,6 +1397,10 @@ function Drawer({ c, onClose, onAdvance, onRestore, onResume, onRequestDecline }
           <div className="text-center text-[12px] text-[#9aa5b1]">Review Manually</div>
         )}
       </div>
+
+      {showResume && (
+        <ResumeModal c={c} onClose={() => setShowResume(false)} onDownload={onResume} />
+      )}
     </div>
   );
 }
@@ -1437,9 +1554,6 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
   if (!c) return null;
   const mb = matchBadge(c.match);
   const stage = STAGE[c.status] || STAGE["To Review"];
-  const uni = UNIS[c.name.length % UNIS.length];
-  const degree = DEGREES[c.years % DEGREES.length];
-  const gradYear = 2026 - c.years - 1;
 
   return (
     <div
@@ -1580,7 +1694,7 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
             {c.status === "In Progress" && (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => onAdvance(c.id)}
+                  onClick={() => onAdvance(c)}
                   className="flex-1 h-9 rounded-md bg-sgi text-white text-[13px] font-medium hover:bg-sgi-600 transition"
                 >
                   Accept
@@ -1625,49 +1739,93 @@ function FocusModal({ list, index, setIndex, onClose, onAdvance, onRestore, onDe
           </div>
 
           <div className="flex-1 overflow-auto p-8">
-            <div className="max-w-[680px] mx-auto bg-white shadow-[0_2px_24px_rgba(0,0,0,0.1)] border border-[#eee] rounded-md px-12 py-12">
-              <h1 className="text-[26px] font-bold text-[#1a1a1a] text-center tracking-tight">{c.name}</h1>
-              <div className="text-center text-[12px] text-[#6B7280] mt-2">
-                {c.email} &nbsp;·&nbsp; {c.phone} &nbsp;·&nbsp; {c.location}
-              </div>
-
-              <ResumeSection title="Education">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium text-[13px] text-[#1a1a1a]">{uni}</span>
-                  <span className="text-[12px] text-[#9aa5b1] tabular-nums">{gradYear}</span>
-                </div>
-                <div className="text-[12px] text-[#6B7280]">{degree}</div>
-              </ResumeSection>
-
-              <ResumeSection title="Work Experience">
-                <div className="space-y-4">
-                  {c.experience.map((e, i) => (
-                    <div key={i}>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="font-medium text-[13px] text-[#1a1a1a]">
-                          {e.role} — {e.company}
-                        </span>
-                        <span className="text-[12px] text-[#9aa5b1] whitespace-nowrap">{e.years}</span>
-                      </div>
-                      <p className="text-[12px] text-[#6B7280] mt-1 leading-relaxed">
-                        Owned reporting and analytics deliverables, partnered with stakeholders, and drove
-                        data-informed decisions in the {c.industry} space.
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </ResumeSection>
-
-              <ResumeSection title="Skills">
-                <p className="text-[13px] text-[#444] leading-relaxed">
-                  SQL ({c.sql}), Python, Tableau, Looker, Snowflake, dbt, Excel modeling, A/B testing,
-                  stakeholder communication.
-                </p>
-              </ResumeSection>
-            </div>
+            <ResumeBody c={c} />
           </div>
         </div>
       </div>
+      </div>
+    </div>
+  );
+}
+
+function ResumeBody({ c }) {
+  const uni = UNIS[c.name.length % UNIS.length];
+  const degree = DEGREES[c.years % DEGREES.length];
+  const gradYear = 2026 - c.years - 1;
+  return (
+    <div className="max-w-[680px] mx-auto bg-white shadow-[0_2px_24px_rgba(0,0,0,0.1)] border border-[#eee] rounded-md px-12 py-12">
+      <h1 className="text-[26px] font-bold text-[#1a1a1a] text-center tracking-tight">{c.name}</h1>
+      <div className="text-center text-[12px] text-[#6B7280] mt-2">
+        {c.email} &nbsp;·&nbsp; {c.phone} &nbsp;·&nbsp; {c.location}
+      </div>
+
+      <ResumeSection title="Education">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="font-medium text-[13px] text-[#1a1a1a]">{uni}</span>
+          <span className="text-[12px] text-[#9aa5b1] tabular-nums">{gradYear}</span>
+        </div>
+        <div className="text-[12px] text-[#6B7280]">{degree}</div>
+      </ResumeSection>
+
+      <ResumeSection title="Work Experience">
+        <div className="space-y-4">
+          {c.experience.map((e, i) => (
+            <div key={i}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-medium text-[13px] text-[#1a1a1a]">
+                  {e.role} — {e.company}
+                </span>
+                <span className="text-[12px] text-[#9aa5b1] whitespace-nowrap">{e.years}</span>
+              </div>
+              <p className="text-[12px] text-[#6B7280] mt-1 leading-relaxed">
+                Owned reporting and analytics deliverables, partnered with stakeholders, and drove
+                data-informed decisions in the {c.industry} space.
+              </p>
+            </div>
+          ))}
+        </div>
+      </ResumeSection>
+
+      <ResumeSection title="Skills">
+        <p className="text-[13px] text-[#444] leading-relaxed">
+          SQL ({c.sql}), Python, Tableau, Looker, Snowflake, dbt, Excel modeling, A/B testing,
+          stakeholder communication.
+        </p>
+      </ResumeSection>
+    </div>
+  );
+}
+
+function ResumeModal({ c, onClose, onDownload }) {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-6 bg-black/40" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-[#f4f5f7] rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[90vw] max-w-[860px] h-[88vh] flex flex-col overflow-hidden"
+      >
+        <div className="h-12 shrink-0 border-b border-[#e8e9ec] bg-white flex items-center justify-between px-5">
+          <span className="text-[13px] font-medium text-[#1a1a1a] truncate">
+            {c.name} — Resume
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onDownload(c)}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-sgi-200 text-sgi text-[12px] font-medium hover:bg-sgi-50 transition"
+            >
+              <Download size={14} /> Download
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]"
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-auto p-8">
+          <ResumeBody c={c} />
+        </div>
       </div>
     </div>
   );
@@ -1862,24 +2020,28 @@ function PageBtn({ children, disabled, onClick }) {
   );
 }
 
-function ReqOption({ active, onClick, label, count, sync }) {
+function ReqOption({ checked, onToggle, label, count, sync }) {
   const syncDot =
     sync === "Synced" ? "bg-green-500" : sync === "Pending" ? "bg-orange-400" : "bg-[#cbd5e0]";
   return (
     <button
-      onClick={onClick}
-      className={`w-full text-left rounded-md px-3 py-2 flex items-center justify-between gap-2 transition ${
-        active ? "bg-sgi-50" : "hover:bg-[#E8F0FB]"
+      onClick={onToggle}
+      className={`w-full text-left rounded-md px-2.5 py-2 flex items-center gap-2 transition ${
+        checked ? "bg-sgi-50" : "hover:bg-[#E8F0FB]"
       }`}
     >
-      <span className="text-[13px] text-[#1a1a1a] truncate">
-        <span className={active ? "font-semibold" : "font-medium"}>{label}</span>{" "}
+      <span
+        className={`w-[14px] h-[14px] rounded border grid place-items-center shrink-0 transition ${
+          checked ? "bg-[#023E8A] border-[#023E8A]" : "bg-white border-[#cbd5e0]"
+        }`}
+      >
+        {checked && <Check size={10} strokeWidth={3} className="text-white" />}
+      </span>
+      <span className="flex-1 text-[13px] text-[#1a1a1a] truncate">
+        <span className={checked ? "font-semibold" : "font-medium"}>{label}</span>{" "}
         <span className="text-[#9aa5b1] font-normal">({count})</span>
       </span>
-      <span className="flex items-center gap-2 shrink-0">
-        {sync && <span className={`w-2 h-2 rounded-full ${syncDot}`} title={`ADP: ${sync}`} />}
-        {active && <Check size={14} className="text-sgi" />}
-      </span>
+      {sync && <span className={`w-2 h-2 rounded-full shrink-0 ${syncDot}`} title={`ADP: ${sync}`} />}
     </button>
   );
 }
@@ -2061,6 +2223,89 @@ const ACTION_OPTIONS = [
   { id: "mark", label: "Mark for Rejection", status: "Marked for Rejection" },
   { id: "keep", label: "Keep On File", status: "Kept on File" },
 ];
+
+const ADVANCE_OPTIONS = [
+  "Advance to Screening Stage",
+  "Mark for Hiring Manager Review",
+  "Advance to Interview Stage",
+  "Advance to Offer Stage",
+  "Advance to Pre-Hire Stage",
+];
+
+function AdvanceModal({ onCancel, onConfirm, count = 1 }) {
+  const [choice, setChoice] = useState(ADVANCE_OPTIONS[0]);
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/40 grid place-items-center p-4" onClick={onCancel}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[480px] max-w-full overflow-hidden"
+      >
+        <div className="px-5 pt-4 pb-3 border-b border-[#f0f0f0] flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-[#1a1a1a]">Advance Application</h2>
+          <button
+            onClick={onCancel}
+            className="p-1 rounded text-[#888] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]"
+            aria-label="Close"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4">
+          <div className="flex items-start gap-2 px-3 py-2 rounded-md bg-[#E8F0FB] border border-[#C9DCF4] text-[12px] text-[#023E8A]">
+            <Info size={13} className="shrink-0 mt-px" />
+            <span>You've selected {count} application{count === 1 ? "" : "s"}.</span>
+          </div>
+
+          <div className="text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mt-4 mb-2">
+            Select Action
+          </div>
+          <div className="space-y-2">
+            {ADVANCE_OPTIONS.map((opt) => (
+              <label
+                key={opt}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-md border cursor-pointer text-[13px] transition ${
+                  choice === opt
+                    ? "border-sgi bg-sgi-50 text-[#023E8A]"
+                    : "border-[#E2E8F0] text-[#1a1a1a] hover:bg-[#fafafa]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="advance-action"
+                  value={opt}
+                  checked={choice === opt}
+                  onChange={() => setChoice(opt)}
+                  className="accent-sgi"
+                />
+                <span>{opt}</span>
+              </label>
+            ))}
+          </div>
+
+          <p className="text-[12px] text-[#6B7280] mt-3">
+            Application status will be marked as &lsquo;{choice}&rsquo;.
+          </p>
+        </div>
+
+        <div className="px-5 pb-4 pt-1 flex items-center justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="h-9 px-4 rounded-md border border-[#E2E8F0] bg-white text-[#4A5568] text-[13px] font-medium hover:bg-[#F7FAFC] transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(choice)}
+            className="h-9 px-4 rounded-md bg-[#023E8A] text-white text-[13px] font-medium hover:bg-[#1A5EBF] transition"
+          >
+            Advance Application
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DeclineModal({ onCancel, onConfirm, count = 1 }) {
   const [action, setAction] = useState("reject");

@@ -1,18 +1,26 @@
 import { useState } from "react";
-import { X, Plus, Pencil, Trash2 } from "lucide-react";
+import { X, Plus, Pencil, Trash2, Check, Search } from "lucide-react";
 import { useApp } from "../store";
 
 const TABS = ["Users", "Roles", "Permissions"];
 const ROLE_OPTIONS = ["Admin", "Hiring Manager", "Recruiter", "Interviewer", "Coordinator", "Reviewer"];
 
+const REQ_LIST = [
+  { id: "REQ-2715", title: "Senior Data Analyst" },
+  { id: "REQ-2701", title: "Regional Performance Manager" },
+  { id: "REQ-2698", title: "BSC Representative" },
+  { id: "REQ-2690", title: "Field Sales" },
+];
+
+// reqs: null = all requisitions, [...ids] = specific
 const SEED_USERS = [
-  { name: "Jatin Sharma", email: "jatin.sharma@safeguard.com", role: "Admin", active: true, invite: "Active", color: "bg-blue-100 text-blue-700" },
-  { name: "Yashvi Patel", email: "yashvi.patel@safeguard.com", role: "Hiring Manager", active: true, invite: "Active", color: "bg-teal-100 text-teal-700" },
-  { name: "Rahul Verma", email: "rahul.verma@safeguard.com", role: "Recruiter", active: true, invite: "Active", color: "bg-green-100 text-green-700" },
-  { name: "Priya Nair", email: "priya.nair@safeguard.com", role: "Interviewer", active: true, invite: "Active", color: "bg-red-100 text-red-700" },
-  { name: "Arjun Singh", email: "arjun.singh@safeguard.com", role: "Coordinator", active: false, invite: "Invited", color: "bg-orange-100 text-orange-700" },
-  { name: "Divya Menon", email: "divya.menon@safeguard.com", role: "Recruiter", active: true, invite: "Active", color: "bg-amber-100 text-amber-700" },
-  { name: "Karan Mehta", email: "karan.mehta@safeguard.com", role: "Reviewer", active: false, invite: "Pending", color: "bg-teal-100 text-teal-700" },
+  { name: "Jatin Sharma", email: "jatin.sharma@safeguard.com", role: "Admin", active: true, invite: "Active", color: "bg-blue-100 text-blue-700", reqs: null },
+  { name: "Yashvi Patel", email: "yashvi.patel@safeguard.com", role: "Hiring Manager", active: true, invite: "Active", color: "bg-teal-100 text-teal-700", reqs: ["REQ-2715"] },
+  { name: "Rahul Verma", email: "rahul.verma@safeguard.com", role: "Recruiter", active: true, invite: "Active", color: "bg-green-100 text-green-700", reqs: null },
+  { name: "Priya Nair", email: "priya.nair@safeguard.com", role: "Interviewer", active: true, invite: "Active", color: "bg-red-100 text-red-700", reqs: ["REQ-2715", "REQ-2701"] },
+  { name: "Arjun Singh", email: "arjun.singh@safeguard.com", role: "Coordinator", active: false, invite: "Invited", color: "bg-orange-100 text-orange-700", reqs: ["REQ-2698"] },
+  { name: "Divya Menon", email: "divya.menon@safeguard.com", role: "Recruiter", active: true, invite: "Active", color: "bg-amber-100 text-amber-700", reqs: null },
+  { name: "Karan Mehta", email: "karan.mehta@safeguard.com", role: "Reviewer", active: false, invite: "Pending", color: "bg-teal-100 text-teal-700", reqs: ["REQ-2715", "REQ-2701", "REQ-2690"] },
 ];
 
 const ROLES = [
@@ -110,6 +118,7 @@ function UsersTab({ showToast }) {
               <th className="px-5 py-2.5 font-semibold">Name</th>
               <th className="px-3 py-2.5 font-semibold">Email</th>
               <th className="px-3 py-2.5 font-semibold">Role</th>
+              <th className="px-3 py-2.5 font-semibold">REQ Access</th>
               <th className="px-3 py-2.5 font-semibold">Status</th>
               <th className="px-3 py-2.5 font-semibold">Invite Status</th>
               <th className="px-3 py-2.5 font-semibold text-right pr-5">Actions</th>
@@ -128,6 +137,9 @@ function UsersTab({ showToast }) {
                 </td>
                 <td className="px-3 py-3 text-slate-600">{u.email}</td>
                 <td className="px-3 py-3 text-slate-700">{u.role}</td>
+                <td className="px-3 py-3">
+                  <ReqAccessChip reqs={u.reqs} />
+                </td>
                 <td className="px-3 py-3">
                   <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${u.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
                     {u.active ? "Active" : "Inactive"}
@@ -181,9 +193,10 @@ function UsersTab({ showToast }) {
 function InviteModal({ onClose, showToast }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("Recruiter");
+  const [reqs, setReqs] = useState(null); // null = All
   return (
     <div onClick={onClose} className="fixed inset-0 z-[70] bg-black/40 grid place-items-center px-4">
-      <div onClick={(e) => e.stopPropagation()} className="relative w-[420px] max-w-full bg-white rounded-[12px] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)] p-6">
+      <div onClick={(e) => e.stopPropagation()} className="relative w-[440px] max-w-full max-h-[90vh] overflow-auto bg-white rounded-[12px] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)] p-6">
         <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded-md text-[#888] hover:bg-[#f5f5f5]" aria-label="Close">
           <X size={16} />
         </button>
@@ -197,9 +210,14 @@ function InviteModal({ onClose, showToast }) {
           className="w-full h-9 px-3 mb-4 border border-[#E2E8F0] rounded-md text-[13px] focus:outline-none focus:border-sgi-400 focus:shadow-[0_0_0_3px_rgba(2,62,138,0.1)]"
         />
         <label className="block text-[11px] uppercase tracking-wide font-medium text-[#94A3B8] mb-1">Role</label>
-        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full h-9 px-3 mb-5 border border-[#E2E8F0] rounded-md text-[13px] bg-white focus:outline-none focus:border-sgi-400">
+        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full h-9 px-3 mb-4 border border-[#E2E8F0] rounded-md text-[13px] bg-white focus:outline-none focus:border-sgi-400">
           {ROLE_OPTIONS.map((r) => (<option key={r} value={r}>{r}</option>))}
         </select>
+
+        <div className="mb-5">
+          <ReqAccessPicker value={reqs} onChange={setReqs} />
+        </div>
+
         <button
           disabled={!email.trim()}
           onClick={() => { showToast(`Invite sent to ${email}`); onClose(); }}
@@ -208,6 +226,128 @@ function InviteModal({ onClose, showToast }) {
           Send Invite
         </button>
       </div>
+    </div>
+  );
+}
+
+function ReqAccessChip({ reqs }) {
+  if (reqs == null) {
+    return (
+      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#E8F0FB] text-[#023E8A]" title="All requisitions">
+        All
+      </span>
+    );
+  }
+  const titles = reqs
+    .map((id) => REQ_LIST.find((r) => r.id === id))
+    .filter(Boolean)
+    .map((r) => `${r.id} — ${r.title}`)
+    .join("\n");
+  return (
+    <span
+      className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#023E8A] border border-[#BFDBFE] cursor-default"
+      title={titles}
+    >
+      {reqs.length} REQ{reqs.length === 1 ? "" : "s"}
+    </span>
+  );
+}
+
+function ReqAccessPicker({ value, onChange }) {
+  // value: null = all, array = specific
+  const isAll = value == null;
+  const list = isAll ? [] : value;
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const visible = q
+    ? REQ_LIST.filter((r) => `${r.id} ${r.title}`.toLowerCase().includes(q))
+    : REQ_LIST;
+  const toggle = (id) =>
+    onChange(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+
+  return (
+    <div>
+      <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-2">
+        Requisition Access
+      </label>
+      <div className="space-y-1.5">
+        <label className="flex items-center gap-2 text-[13px] text-[#1a1a1a] cursor-pointer">
+          <input
+            type="radio"
+            checked={isAll}
+            onChange={() => onChange(null)}
+            className="accent-[#023E8A]"
+          />
+          All Requisitions
+        </label>
+        <label className="flex items-center gap-2 text-[13px] text-[#1a1a1a] cursor-pointer">
+          <input
+            type="radio"
+            checked={!isAll}
+            onChange={() => onChange([])}
+            className="accent-[#023E8A]"
+          />
+          Specific Requisitions
+        </label>
+      </div>
+
+      {!isAll && (
+        <>
+          <div className="mt-2 border border-[#E2E8F0] rounded-md max-h-[220px] overflow-auto">
+            {/* sticky search */}
+            <div className="sticky top-0 bg-white border-b border-[#E2E8F0] p-2">
+              <div className="relative">
+                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9aa5b1]" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search requisitions…"
+                  className="w-full pl-7 pr-2.5 py-1.5 border border-[#E2E8F0] rounded-md text-[12px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400"
+                />
+              </div>
+            </div>
+
+            <div className="p-2 space-y-1.5">
+              {visible.length === 0 && (
+                <div className="text-[12px] text-[#9aa5b1] px-1.5 py-2 text-center">
+                  No requisitions found
+                </div>
+              )}
+              {visible.map((r) => {
+                const on = list.includes(r.id);
+                return (
+                  <label
+                    key={r.id}
+                    className="flex items-start gap-2 px-1.5 py-1 rounded hover:bg-[#fafafa] cursor-pointer"
+                  >
+                    <span
+                      onClick={(e) => { e.preventDefault(); toggle(r.id); }}
+                      className={`mt-[2px] w-[14px] h-[14px] rounded border grid place-items-center shrink-0 transition ${
+                        on ? "bg-[#023E8A] border-[#023E8A]" : "bg-white border-[#cbd5e0]"
+                      }`}
+                    >
+                      {on && <Check size={10} strokeWidth={3} className="text-white" />}
+                    </span>
+                    <div className="leading-tight">
+                      <div className="text-[12px] font-semibold text-[#1a1a1a]">{r.id}</div>
+                      <div className="text-[11px] text-[#6B7280]">{r.title}</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => toggle(r.id)}
+                      className="sr-only"
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-[11px] text-[#6B7280] mt-1.5">
+            User will only see candidates from selected requisitions
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -239,6 +379,7 @@ function EditUserDrawer({ user, onClose, onSave }) {
   const [name, setName] = useState(user.name);
   const [role, setRole] = useState(user.role);
   const [active, setActive] = useState(user.active);
+  const [reqs, setReqs] = useState(user.reqs ?? null);
   const [perms, setPerms] = useState(() => permsForRole(user.role));
 
   const changeRole = (r) => { setRole(r); setPerms(permsForRole(r)); };
@@ -300,6 +441,8 @@ function EditUserDrawer({ user, onClose, onSave }) {
             </button>
           </div>
 
+          <ReqAccessPicker value={reqs} onChange={setReqs} />
+
           <div className="pt-1">
             <div className="text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-2.5">Permissions</div>
             <div className="space-y-2.5">
@@ -316,7 +459,7 @@ function EditUserDrawer({ user, onClose, onSave }) {
         {/* footer */}
         <div className="border-t border-[#f0f0f0] px-5 py-4">
           <button
-            onClick={() => onSave({ name, role, active })}
+            onClick={() => onSave({ name, role, active, reqs })}
             className="w-full h-9 rounded-md bg-[#023E8A] text-white text-[13px] font-medium hover:bg-[#1A5EBF] transition"
           >
             Save Changes
