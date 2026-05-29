@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
+import { useApp } from "../store";
+import ReqMultiSelect from "../components/ReqMultiSelect";
 
 /* ------------------------------- data ------------------------------------ */
 
@@ -84,94 +86,22 @@ function Donut({ data, size = 180, thickness = 26, total }) {
   );
 }
 
-function ReqFilter({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
-  const ref = useRef(null);
-  const label = value === "all" ? "All Requisitions" : value;
-  const query = q.trim().toLowerCase();
-  const visible = query
-    ? REQS.filter((r) => `${r.id} ${r.title}`.toLowerCase().includes(query))
-    : REQS;
-
-  // close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => { setOpen((o) => !o); setQ(""); }}
-        className="h-8 px-3 inline-flex items-center gap-1.5 bg-white border border-[#E2E8F0] rounded-md text-[13px] font-medium text-[#4A5568] hover:bg-[#F7FAFC]"
-      >
-        {label}
-        <ChevronDown size={14} className={`transition ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 w-[280px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] flex flex-col max-h-[360px] overflow-hidden">
-          {/* sticky search */}
-          <div className="sticky top-0 bg-white border-b border-[#f0f0f0] p-2">
-            <div className="relative">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9aa5b1]" />
-              <input
-                autoFocus
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search requisitions…"
-                className="w-full pl-7 pr-2.5 py-1.5 border border-[#E2E8F0] rounded-md text-[12px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400"
-              />
-            </div>
-          </div>
-
-          <div className="overflow-auto py-1">
-            {/* All option pinned, not filterable */}
-            <button
-              onClick={() => { onChange("all"); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-[13px] hover:bg-[#E8F0FB] ${value === "all" ? "text-[#023E8A] font-semibold" : "text-[#1a1a1a]"}`}
-            >
-              All Requisitions
-            </button>
-            <div className="my-1 border-t border-[#f0f0f0]" />
-
-            {visible.length === 0 ? (
-              <div className="px-3 py-3 text-center text-[12px] text-[#9aa5b1]">
-                No requisitions found
-              </div>
-            ) : (
-              visible.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => { onChange(r.id); setOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-[13px] hover:bg-[#E8F0FB] ${value === r.id ? "text-[#023E8A] font-semibold" : "text-[#1a1a1a]"}`}
-                >
-                  <div>{r.id}</div>
-                  <div className="text-[11px] text-[#6B7280] truncate">{r.title}</div>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ------------------------------- page ------------------------------------ */
 
 export default function Dashboard() {
+  const { showToast } = useApp();
   const [version, setVersion] = useState(1);
-  const [reqFilter, setReqFilter] = useState("all");
+  const [reqFilter, setReqFilter] = useState(() => new Set()); // empty = all
 
   const reqs = useMemo(
-    () => (reqFilter === "all" ? REQS : REQS.filter((r) => r.id === reqFilter)),
+    () => (reqFilter.size === 0 ? REQS : REQS.filter((r) => reqFilter.has(r.id))),
     [reqFilter]
   );
+
+  // Dashboard has no candidate counts — use headcount in parentheses for visual parity
+  const reqsForFilter = REQS.map((r) => ({ id: r.id, title: r.title, adpSync: "Synced" }));
+  const counts = Object.fromEntries(REQS.map((r) => [r.id, r.headcount]));
 
   return (
     <div className="p-8 max-w-[1480px] mx-auto">
@@ -198,7 +128,17 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-          <ReqFilter value={reqFilter} onChange={setReqFilter} />
+          <ReqMultiSelect
+            value={reqFilter}
+            onChange={setReqFilter}
+            requisitions={reqsForFilter}
+            counts={counts}
+            totalCount={REQS.reduce((s, r) => s + r.headcount, 0)}
+            onSyncAdp={() => showToast("Syncing with ADP…")}
+            allLabel="All Job Openings"
+            emptyButtonLabel="All Requisitions"
+            align="right"
+          />
         </div>
       </div>
 

@@ -16,13 +16,13 @@ import {
   FileText,
   Files,
   Globe,
-  RefreshCw,
   Columns3,
   Eye,
   Info,
   GripVertical,
 } from "lucide-react";
 import { useApp } from "../store";
+import ReqMultiSelect from "../components/ReqMultiSelect";
 
 /* ----------------------------- status mapping ---------------------------- */
 
@@ -147,8 +147,6 @@ export default function Screening() {
     useApp();
 
   const [reqFilter, setReqFilter] = useState(() => new Set(["REQ-2715"]));
-  const [reqDraft, setReqDraft] = useState(() => new Set(["REQ-2715"]));
-  const [reqSearch, setReqSearch] = useState("");
   const [query, setQuery] = useState("");
   const [aiQuery, setAiQuery] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
@@ -213,13 +211,11 @@ export default function Screening() {
   };
   const colLabel = (key) => COLUMNS.find((c) => c.key === key)?.label || key;
   const [colsOpen, setColsOpen] = useState(false);
-  const [reqOpen, setReqOpen] = useState(false);
   const [rpp, setRpp] = useState(10);
   const [rppOpen, setRppOpen] = useState(false);
   const [page, setPage] = useState(1);
 
   const colsRef = useRef(null);
-  const reqRef = useRef(null);
   const rppRef = useRef(null);
   const uploadRef = useRef(null);
 
@@ -227,7 +223,6 @@ export default function Screening() {
   const [uploadModal, setUploadModal] = useState(null); // null | "single" | "bulk"
 
   useOutside(colsRef, colsOpen, () => setColsOpen(false));
-  useOutside(reqRef, reqOpen, () => setReqOpen(false));
   useOutside(rppRef, rppOpen, () => setRppOpen(false));
   useOutside(bulkAdvRef, bulkAdvOpen, () => setBulkAdvOpen(false));
   useOutside(uploadRef, uploadOpen, () => setUploadOpen(false));
@@ -317,14 +312,6 @@ export default function Screening() {
       return next;
     });
 
-  const onlyReqId = reqFilter.size === 1 ? [...reqFilter][0] : null;
-  const activeReqObj = onlyReqId ? requisitions.find((r) => r.id === onlyReqId) : null;
-  const reqButtonLabel =
-    reqFilter.size === 0
-      ? "All Job Openings"
-      : reqFilter.size === 1
-      ? `${activeReqObj?.id} — ${activeReqObj?.title}`
-      : `${reqFilter.size} Requisitions Selected`;
   const reqCounts = useMemo(() => {
     const m = {};
     candidates.forEach((c) => { m[c.reqId] = (m[c.reqId] || 0) + 1; });
@@ -522,117 +509,30 @@ export default function Screening() {
             <h1 className="text-[18px] font-bold text-[#1a1a1a] leading-none">
               Candidates
             </h1>
-            {/* Requisition dropdown — multi-select w/ search */}
-            <div className="relative" ref={reqRef}>
-              <button
-                onClick={() => {
-                  setReqDraft(new Set(reqFilter));
-                  setReqSearch("");
-                  setReqOpen((o) => !o);
-                }}
-                className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[13px] transition ${
-                  reqOpen
-                    ? "border-sgi-300 bg-sgi-50 text-sgi"
-                    : "border-[#E2E8F0] text-[#4A5568] hover:bg-[#F7FAFC]"
-                }`}
-              >
-                <span className="font-medium truncate max-w-[260px]">{reqButtonLabel}</span>
-                <ChevronDown size={14} className={`shrink-0 transition-transform ${reqOpen ? "rotate-180" : ""}`} />
-              </button>
-              {reqOpen && (
-                <div className="absolute left-0 top-full mt-1 z-30 w-[320px] bg-white border border-[#E2E8F0] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] flex flex-col">
-                  {/* search */}
-                  <div className="p-2 border-b border-[#f0f0f0]">
-                    <div className="relative">
-                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9aa5b1]" />
-                      <input
-                        autoFocus
-                        value={reqSearch}
-                        onChange={(e) => setReqSearch(e.target.value)}
-                        placeholder="Search requisitions…"
-                        className="w-full pl-7 pr-2.5 py-1.5 border border-[#E2E8F0] rounded-md text-[13px] text-[#1a1a1a] placeholder:text-[#9aa5b1] focus:outline-none focus:border-sgi-400"
-                      />
-                    </div>
-                  </div>
-
-                  {/* options */}
-                  <div className="max-h-[300px] overflow-auto p-1">
-                    <ReqOption
-                      checked={reqDraft.size === 0}
-                      onToggle={() => setReqDraft(new Set())}
-                      label="All Job Openings"
-                      count={candidates.length}
-                    />
-                    {requisitions
-                      .filter((r) => (reqCounts[r.id] || 0) > 0)
-                      .filter((r) => {
-                        const q = reqSearch.trim().toLowerCase();
-                        if (!q) return true;
-                        return `${r.id} ${r.title}`.toLowerCase().includes(q);
-                      })
-                      .map((r) => (
-                        <ReqOption
-                          key={r.id}
-                          checked={reqDraft.has(r.id)}
-                          onToggle={() =>
-                            setReqDraft((prev) => {
-                              const next = new Set(prev);
-                              next.has(r.id) ? next.delete(r.id) : next.add(r.id);
-                              return next;
-                            })
-                          }
-                          label={`${r.id} — ${r.title}`}
-                          count={reqCounts[r.id]}
-                          sync={r.adpSync}
-                        />
-                      ))}
-                  </div>
-
-                  {/* footer actions */}
-                  <div className="border-t border-[#f0f0f0] px-3 py-2 flex items-center justify-between">
-                    <button
-                      onClick={() => setReqDraft(new Set())}
-                      className="text-[12px] text-[#6B7280] hover:text-[#1a1a1a] hover:underline"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={() => {
-                        const next = new Set(reqDraft);
-                        setReqFilter(next);
-                        // auto show/hide the Requisition column based on selection breadth
-                        setHiddenCols((prev) => {
-                          const h = new Set(prev);
-                          if (next.size === 1) h.add("requisition");
-                          else h.delete("requisition");
-                          return h;
-                        });
-                        // ensure requisition sits first in colOrder (right after locked Name)
-                        setColOrder((prev) => {
-                          if (prev[0] === "requisition") return prev;
-                          const a = prev.filter((k) => k !== "requisition");
-                          return ["requisition", ...a];
-                        });
-                        setReqOpen(false);
-                      }}
-                      className="h-7 px-3 rounded-md bg-[#023E8A] text-white text-[12px] font-medium hover:bg-[#1A5EBF] transition"
-                    >
-                      Apply
-                    </button>
-                  </div>
-
-                  {/* sync adp */}
-                  <div className="border-t border-[#f0f0f0] p-1">
-                    <button
-                      onClick={() => { showToast("Syncing with ADP…"); setReqOpen(false); }}
-                      className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-[12px] font-medium text-sgi hover:bg-[#E8F0FB] transition"
-                    >
-                      <RefreshCw size={13} /> Sync ADP now
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Requisition dropdown — shared multi-select */}
+            <ReqMultiSelect
+              value={reqFilter}
+              onChange={(next) => {
+                setReqFilter(next);
+                // auto show/hide the Requisition column based on selection breadth
+                setHiddenCols((prev) => {
+                  const h = new Set(prev);
+                  if (next.size === 1) h.add("requisition");
+                  else h.delete("requisition");
+                  return h;
+                });
+                // ensure requisition sits first in colOrder (right after locked Name)
+                setColOrder((prev) => {
+                  if (prev[0] === "requisition") return prev;
+                  const a = prev.filter((k) => k !== "requisition");
+                  return ["requisition", ...a];
+                });
+              }}
+              requisitions={requisitions.filter((r) => (reqCounts[r.id] || 0) > 0)}
+              counts={reqCounts}
+              totalCount={candidates.length}
+              onSyncAdp={() => showToast("Syncing with ADP…")}
+            />
           </div>
 
           {/* Search */}
@@ -2016,32 +1916,6 @@ function PageBtn({ children, disabled, onClick }) {
       className="h-7 px-2 rounded-md text-[12px] text-[#4A5568] hover:bg-[#f3f4f6] disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {children}
-    </button>
-  );
-}
-
-function ReqOption({ checked, onToggle, label, count, sync }) {
-  const syncDot =
-    sync === "Synced" ? "bg-green-500" : sync === "Pending" ? "bg-orange-400" : "bg-[#cbd5e0]";
-  return (
-    <button
-      onClick={onToggle}
-      className={`w-full text-left rounded-md px-2.5 py-2 flex items-center gap-2 transition ${
-        checked ? "bg-sgi-50" : "hover:bg-[#E8F0FB]"
-      }`}
-    >
-      <span
-        className={`w-[14px] h-[14px] rounded border grid place-items-center shrink-0 transition ${
-          checked ? "bg-[#023E8A] border-[#023E8A]" : "bg-white border-[#cbd5e0]"
-        }`}
-      >
-        {checked && <Check size={10} strokeWidth={3} className="text-white" />}
-      </span>
-      <span className="flex-1 text-[13px] text-[#1a1a1a] truncate">
-        <span className={checked ? "font-semibold" : "font-medium"}>{label}</span>{" "}
-        <span className="text-[#9aa5b1] font-normal">({count})</span>
-      </span>
-      {sync && <span className={`w-2 h-2 rounded-full shrink-0 ${syncDot}`} title={`ADP: ${sync}`} />}
     </button>
   );
 }
