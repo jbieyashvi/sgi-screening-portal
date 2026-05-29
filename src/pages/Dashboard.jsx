@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 
 /* ------------------------------- data ------------------------------------ */
 
 const REQS = [
-  { id: "REQ-2683", title: "Apprentice Installer / DSD",           location: "Atlanta, GA",       work: "Onsite", kind: "Backfill",     headcount: 1,  hiringManager: "Joe Copeland",      recruiter: "Spencer",            daysOpen: 22, stage: "Recruiter Phone Screen", dept: "DSD",                  dateOpened: null,         agency: false },
-  { id: "REQ-2667", title: "VSC Adjuster I-III ATL",               location: "Atlanta, GA",       work: "Hybrid", kind: "New/Backfill", headcount: 17, hiringManager: "Revolving",         recruiter: "Spencer & Jon Marie", daysOpen: 22, stage: "Start Date",             dept: "Operations",           dateOpened: "May 4, 2026", agency: false },
-  { id: "REQ-2766", title: "VSC Manager",                          location: "Greenville, SC",    work: "Onsite", kind: "Backfill",     headcount: 1,  hiringManager: "Addis Davis",       recruiter: "Spencer",            daysOpen: 23, stage: "Sourcing",               dept: "Operations",           dateOpened: "May 5, 2026", agency: false },
-  { id: "REQ-2669", title: "Key Partner Executive I",              location: "Atlanta, GA",       work: "Hybrid", kind: "Backfill",     headcount: 4,  hiringManager: "Christina Sweeten", recruiter: "Spencer",            daysOpen: 99, stage: "HM Video Interview",     dept: "Key Partner",          dateOpened: "Feb 17, 2026", agency: true },
-  { id: "REQ-2732", title: "Regional Performance Manager Honda",   location: "Remote ATL/PHL",    work: "Remote", kind: "Backfill",     headcount: 1,  hiringManager: "Marc Wagstaff",     recruiter: "Spencer",            daysOpen: 59, stage: "Start Date",             dept: "Sales & Training NVR", dateOpened: "Mar 27, 2026", agency: false },
-  { id: "REQ-2746", title: "Account Development Manager VCI",      location: "Remote DFW",        work: "Remote", kind: "Backfill",     headcount: 1,  hiringManager: "Mike Baker",        recruiter: "Spencer",            daysOpen: 50, stage: "Start Date",             dept: "Sales & Training NVR", dateOpened: "Apr 6, 2026", agency: false },
+  { id: "REQ-2683", title: "Apprentice Installer / DSD",            location: "Atlanta, GA",    work: "Onsite", kind: "Backfill",     kindDetail: "Backfill - Chris Santoro",                                       headcount: 1,  hiringManager: "Joe Copeland",      recruiter: "Spencer",             daysOpen: 22, stage: "Recruiter Phone Screen", dept: "DSD",                  dateOpened: "5/6/2026",  agency: false, note: "Candidates in recruiter phone screen stage." },
+  { id: "REQ-2667", title: "VSC Adjuster I-II ATL",                 location: "Atlanta, GA",    work: "Hybrid", kind: "New/Backfill", kindDetail: "New or Backfill",                                                headcount: 17, hiringManager: "Revolving",         recruiter: "Spencer & Jon Marie", daysOpen: 22, stage: "Start Date",             dept: "Operations",           dateOpened: "5/4/2026",  agency: false, note: "Cleared to start candidates and offer pending activity." },
+  { id: "REQ-2766", title: "VSC Manager",                           location: "Greenville, SC", work: "Onsite", kind: "Backfill",     kindDetail: "Backfill - Eric Kirkwood",                                       headcount: 1,  hiringManager: "Addis Davis",       recruiter: "Spencer",             daysOpen: 23, stage: "Sourcing",               dept: "Operations",           dateOpened: "5/5/2026",  agency: false, note: "Posted 5/5. Candidate sourcing in progress." },
+  { id: "REQ-2669", title: "Key Partner Executive I",               location: "Atlanta, GA",    work: "Hybrid", kind: "New/Backfill", kindDetail: "Backfill - Amira Ali & Adeola Oyemade and NEW for KIA",          headcount: 4,  hiringManager: "Christina Sweeten", recruiter: "Spencer",             daysOpen: 99, stage: "HM Video Interview",     dept: "Key Partner",          dateOpened: "2/17/2026", agency: true,  note: "Multiple candidates in interview, submitted, and phone screen stages." },
+  { id: "REQ-2732", title: "Regional Performance Manager - Honda",  location: "Remote ATL/PHL", work: "Remote", kind: "Backfill",     kindDetail: "Backfill - Stephen Maus",                                        headcount: 1,  hiringManager: "Marc Wagstaff",     recruiter: "Spencer",             daysOpen: 59, stage: "Start Date",             dept: "Sales & Training NVR", dateOpened: "3/27/2026", agency: false, note: "Candidate cleared to start." },
+  { id: "REQ-2746", title: "Account Development Manager - VCI",     location: "Remote DFW",     work: "Remote", kind: "Backfill",     kindDetail: "Backfill - Mike Williams",                                       headcount: 1,  hiringManager: "Mike Baker",        recruiter: "Spencer",             daysOpen: 50, stage: "Start Date",             dept: "Sales & Training NVR", dateOpened: "4/6/2026",  agency: false, note: "Candidate cleared to start." },
 ];
+
+const riskFor = (d) => (d <= 30 ? "Normal" : d <= 60 ? "Watch" : "Critical");
+const RISK_COLOR = {
+  Normal:   "bg-[#DCFCE7] text-[#16A34A] border-[#BBF7D0]",
+  Watch:    "bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]",
+  Critical: "bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]",
+};
 
 const SOURCING = [
   { label: "LinkedIn",      pct: 56, color: "#7C3AED" }, // purple
@@ -205,6 +212,7 @@ export default function Dashboard() {
 /* ============================== Version 1 =============================== */
 
 function V1({ reqs }) {
+  const [detail, setDetail] = useState(null);
   const headcount = reqs.reduce((s, r) => s + r.headcount, 0);
   const avgDays = Math.round(reqs.reduce((s, r) => s + r.daysOpen, 0) / Math.max(reqs.length, 1));
   const apps = Math.round(TOTAL_APPLICATIONS * (reqs.length / REQS.length));
@@ -291,44 +299,58 @@ function V1({ reqs }) {
         </div>
       </div>
 
-      {/* req table */}
+      {/* req table — exec summary */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-200">
           <h2 className="font-semibold text-slate-900">Requisition Status</h2>
+          <p className="text-[12px] text-slate-500 mt-0.5">Click a row to see full details.</p>
         </div>
         <table className="w-full text-left text-[13px]">
           <thead className="bg-[#fbfbfc] text-[11px] uppercase tracking-wide text-[#8a93a0]">
             <tr>
               <th className="px-5 py-2.5 font-semibold">REQ #</th>
               <th className="px-3 py-2.5 font-semibold">Job Title</th>
-              <th className="px-3 py-2.5 font-semibold">Location</th>
+              <th className="px-3 py-2.5 font-semibold text-right">HC</th>
               <th className="px-3 py-2.5 font-semibold">Department</th>
-              <th className="px-3 py-2.5 font-semibold">Hiring Manager</th>
               <th className="px-3 py-2.5 font-semibold">Recruiter</th>
               <th className="px-3 py-2.5 font-semibold text-right">Days Open</th>
-              <th className="px-3 py-2.5 font-semibold pr-5">Status</th>
+              <th className="px-3 py-2.5 font-semibold">Status</th>
+              <th className="px-3 py-2.5 font-semibold pr-5">Risk</th>
             </tr>
           </thead>
           <tbody>
-            {reqs.map((r) => (
-              <tr key={r.id} className="border-t border-[#f3f4f6]">
-                <td className="px-5 py-3 font-medium text-[#023E8A]">{r.id}</td>
-                <td className="px-3 py-3 text-slate-800">{r.title}</td>
-                <td className="px-3 py-3 text-slate-600">{r.location}</td>
-                <td className="px-3 py-3 text-slate-600">{r.dept}</td>
-                <td className="px-3 py-3 text-slate-600">{r.hiringManager}</td>
-                <td className="px-3 py-3 text-slate-600">{r.recruiter}</td>
-                <td className={`px-3 py-3 text-right font-semibold tabular-nums ${daysColor(r.daysOpen)}`}>{r.daysOpen}</td>
-                <td className="px-3 py-3 pr-5">
-                  <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border ${STAGE_COLOR[r.stage]}`}>
-                    {r.stage}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {reqs.map((r) => {
+              const risk = riskFor(r.daysOpen);
+              return (
+                <tr
+                  key={r.id}
+                  onClick={() => setDetail(r)}
+                  className="border-t border-[#f3f4f6] hover:bg-[#F8FAFC] cursor-pointer transition"
+                >
+                  <td className="px-5 py-3 font-medium text-[#023E8A]">{r.id}</td>
+                  <td className="px-3 py-3 text-slate-800">{r.title}</td>
+                  <td className="px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{r.headcount}</td>
+                  <td className="px-3 py-3 text-slate-600">{r.dept}</td>
+                  <td className="px-3 py-3 text-slate-600">{r.recruiter}</td>
+                  <td className={`px-3 py-3 text-right font-semibold tabular-nums ${daysColor(r.daysOpen)}`}>{r.daysOpen}</td>
+                  <td className="px-3 py-3">
+                    <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border ${STAGE_COLOR[r.stage]}`}>
+                      {r.stage}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 pr-5">
+                    <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full border ${RISK_COLOR[risk]}`}>
+                      {risk}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      {detail && <ReqDetailDrawer req={detail} onClose={() => setDetail(null)} />}
     </>
   );
 }
@@ -660,6 +682,71 @@ function Cell({ on }) {
 }
 
 /* ------------------------------ shared bits ------------------------------ */
+
+function ReqDetailDrawer({ req: r, onClose }) {
+  const risk = riskFor(r.daysOpen);
+  return (
+    <div className="fixed inset-0 z-[80]">
+      <div onClick={onClose} className="absolute inset-0 bg-black/30" />
+      <aside className="absolute right-0 top-0 h-full w-[420px] bg-white border-l border-[#ececec] shadow-[-8px_0_30px_-12px_rgba(0,0,0,0.2)] flex flex-col">
+        <div className="px-5 pt-5 pb-4 border-b border-[#f0f0f0] relative">
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 p-1.5 rounded-md text-[#888] hover:bg-[#f5f5f5]"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+          <div className="text-[12px] text-[#023E8A] font-semibold">{r.id}</div>
+          <h2 className="text-[16px] font-bold text-[#1a1a1a] leading-tight mt-0.5 pr-6">{r.title}</h2>
+          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+            <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border ${STAGE_COLOR[r.stage]}`}>
+              {r.stage}
+            </span>
+            <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full border ${RISK_COLOR[risk]}`}>
+              {risk}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto px-5 py-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+            <Field label="Headcount"     value={r.headcount} />
+            <Field label="Location"      value={r.location} />
+            <Field label="Position Type" value={r.work} />
+            <Field label="Department"    value={r.dept} />
+            <Field label="Hiring Manager" value={r.hiringManager} />
+            <Field label="Recruiter"     value={r.recruiter} />
+            <Field label="Agency"        value={r.agency ? "Yes" : "No"} />
+            <Field label="Date Opened"   value={r.dateOpened} />
+            <Field label="Days Open"     value={<span className={daysColor(r.daysOpen)}>{r.daysOpen}</span>} />
+            <Field label="Recruiting Status" value={r.stage} />
+          </div>
+
+          <div className="mt-4">
+            <Field label="New vs Backfill" value={r.kindDetail || r.kind} />
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-[#f0f0f0]">
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-1.5">Job Progress Notes</div>
+            <p className="text-[13px] text-slate-700 leading-relaxed">{r.note}</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function Field({ label, value }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8] mb-0.5">{label}</div>
+      <div className="text-[13px] text-slate-800 font-medium truncate" title={typeof value === "string" ? value : undefined}>
+        {value}
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ label, value }) {
   return (
